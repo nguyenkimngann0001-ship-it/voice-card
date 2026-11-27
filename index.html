@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VoiceCard — Tạo Thiệp & Mã QR Bảo Mật</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
       --bg: #FAF7F2; --card: #FFFFFF; --ink: #172A27; --muted: #5E6D69;
@@ -41,7 +41,8 @@
     .btn-danger { background: var(--danger); color: #fff; }
     audio, video { width: 100%; margin-top: 8px; border-radius: 10px; max-height: 200px; }
     .qr-card { text-align: center; }
-    .qr-box { display: inline-flex; justify-content: center; align-items: center; padding: 16px; background: #fff; border: 2px solid var(--accent-soft); border-radius: 16px; margin: 12px auto; min-height: 216px; min-width: 216px; }
+    .qr-box { display: inline-flex; justify-content: center; align-items: center; padding: 14px; background: #fff; border: 2px solid var(--accent-soft); border-radius: 16px; margin: 12px auto; width: 214px; height: 214px; }
+    .qr-box img, .qr-box canvas { display: block; width: 184px !important; height: 184px !important; }
     .pin-badge { display: inline-block; background: var(--accent-soft); color: var(--forest); padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
     .qr-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
     .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
@@ -112,4 +113,340 @@
           <label>Lời nhắn giọng nói / Video</label>
           <div class="audio-box">
             <div class="audio-actions">
-              <button type="button" class="btn btn-forest" id="recBtn"
+              <button type="button" class="btn btn-forest" id="recBtn" onclick="toggleRecord()">Thu âm giọng nói</button>
+              <button type="button" class="btn btn-danger hidden" id="stopBtn" onclick="stopRecord()">Dừng thu âm</button>
+              <label class="btn btn-outline" style="margin:0; cursor:pointer;">
+                Tải file âm thanh/video
+                <input type="file" id="mediaFile" accept="audio/*,video/*" style="display:none" onchange="handleFileUpload(event)" />
+              </label>
+            </div>
+            <div id="recStatus" class="status-msg">Chưa có file ghi âm — có thể thu âm hoặc tải tệp lên.</div>
+            <audio id="previewAudio" controls></audio>
+            <video id="previewVideo" controls class="hidden"></video>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="generateQR()">Tạo Thiệp & Sinh Mã QR</button>
+      </div>
+
+      <div class="panel qr-card">
+        <h2>Mã QR của thiệp</h2>
+        <div class="pin-badge" id="pinDisplay">Mã PIN mở khóa: 1234</div>
+        <div class="qr-box" id="qrContainer"></div>
+        <div id="qrLinkText" class="hint"></div>
+
+        <div class="qr-actions">
+          <button type="button" class="btn btn-forest" onclick="downloadQR()">Tải ảnh QR (PNG)</button>
+          <button type="button" class="btn btn-outline" onclick="window.print()">In mẫu thiệp</button>
+          <button type="button" class="btn btn-outline" onclick="openRecipientDemo()">Giả lập quét QR</button>
+        </div>
+        <p class="hint">
+          Tải file âm thanh lên sẽ không làm mất mã QR. Dùng <strong>Giả lập quét QR</strong> hoặc mở tab <strong>2. Mở Thiệp</strong> để nghe tệp đã chọn.
+        </p>
+      </div>
+    </section>
+
+    <section id="recipientView" class="hidden">
+      <div class="panel vault-wrap">
+        <span class="tag" id="recThemeTag">THUỘC TÍNH THIỆP</span>
+        <h2 id="recGreeting">Thiệp dành cho bạn</h2>
+        <p class="hint" id="recHintDemo">Nhập mã PIN 4 số để mở khóa lời nhắn riêng tư (Mặc định demo: 1234).</p>
+
+        <div id="pinLockBox">
+          <div class="pin-inputs">
+            <input type="password" maxlength="1" class="pin-digit" oninput="movePin(this, 0)" />
+            <input type="password" maxlength="1" class="pin-digit" oninput="movePin(this, 1)" />
+            <input type="password" maxlength="1" class="pin-digit" oninput="movePin(this, 2)" />
+            <input type="password" maxlength="1" class="pin-digit" oninput="movePin(this, 3)" />
+          </div>
+          <div class="error-text" id="pinError"></div>
+          <button type="button" class="btn btn-primary" onclick="unlockCard()">Mở khóa lời nhắn</button>
+        </div>
+
+        <div id="unlockedBox" class="unlocked-card hidden">
+          <div style="font-size:13px; color:var(--muted); margin-bottom:6px;" id="cardMeta"></div>
+          <p id="cardText" style="font-size:15.5px; margin-bottom:14px;"></p>
+          <audio id="recAudio" controls></audio>
+          <video id="recVideo" controls class="hidden"></video>
+          <div id="mediaNote" class="hint"></div>
+          <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-forest" onclick="sendReaction()">Gửi lời cảm ơn</button>
+            <button type="button" class="btn btn-outline" onclick="lockCardAgain()">Khóa lại</button>
+          </div>
+          <div id="reactionMsg" class="status-msg"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let currentCard = {
+      id: "VC-" + Math.floor(1000 + Math.random() * 9000),
+      theme: "Tốt nghiệp",
+      pin: "1234",
+      sender: "Minh Anh",
+      recipient: "Lan Phương",
+      message: "Chúc mừng cậu đã hoàn thành chặng đường đại học thật rực rỡ! Nghe lời nhắn thoại mình thu riêng cho cậu nhé.",
+      mediaType: "audio",
+      mediaUrl: "",
+      mediaName: ""
+    };
+
+    let mediaRecorder = null;
+    let chunks = [];
+
+    function updateFileInfoOnly() {
+      const fileInfo = currentCard.mediaName ? ` • Tệp: ${currentCard.mediaName}` : "";
+      document.getElementById("qrLinkText").textContent = `Mã thiệp: ${currentCard.id} — Dành cho ${currentCard.recipient}${fileInfo}`;
+    }
+
+    function applyPreset(type) {
+      if (type === "grad") {
+        document.getElementById("themeSelect").value = "Tốt nghiệp";
+        document.getElementById("senderInput").value = "Minh Anh";
+        document.getElementById("recipientInput").value = "Lan Phương";
+        document.getElementById("messageInput").value = "Chúc mừng tân cử nhân! Chúc cậu luôn tự tin, bản lĩnh và gặp nhiều cơ hội tuyệt vời sắp tới.";
+        document.getElementById("pinInput").value = "2026";
+      } else if (type === "bday") {
+        document.getElementById("themeSelect").value = "Sinh nhật";
+        document.getElementById("senderInput").value = "Hoàng Nam";
+        document.getElementById("recipientInput").value = "Thảo Vy";
+        document.getElementById("messageInput").value = "Sinh nhật vui vẻ nhé! Mong tuổi mới của cậu tràn ngập tiếng cười, sức khỏe và thật nhiều niềm vui.";
+        document.getElementById("pinInput").value = "1908";
+      } else {
+        document.getElementById("themeSelect").value = "Tri ân đối tác / Khách hàng";
+        document.getElementById("senderInput").value = "Đội ngũ VoiceCard";
+        document.getElementById("recipientInput").value = "Khách hàng thân thiết";
+        document.getElementById("messageInput").value = "Cảm ơn bạn đã tin tưởng đồng hành cùng chúng mình. Quét PIN để nghe lời tri ân đặc biệt dành riêng cho bạn.";
+        document.getElementById("pinInput").value = "8888";
+      }
+      generateQR();
+    }
+
+    async function toggleRecord() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        chunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+          const url = URL.createObjectURL(blob);
+          currentCard.mediaUrl = url;
+          currentCard.mediaType = "audio";
+          currentCard.mediaName = "Ghi âm trực tiếp";
+          const aud = document.getElementById("previewAudio");
+          aud.classList.remove("hidden");
+          aud.src = url;
+          document.getElementById("previewVideo").classList.add("hidden");
+          document.getElementById("recStatus").textContent = "Đã lưu bản thu âm giọng nói mới.";
+          updateFileInfoOnly();
+          stream.getTracks().forEach(t => t.stop());
+        };
+        mediaRecorder.start();
+        document.getElementById("recBtn").classList.add("hidden");
+        document.getElementById("stopBtn").classList.remove("hidden");
+        document.getElementById("recStatus").textContent = "Đang thu âm... hãy nói lời nhắn của bạn.";
+      } catch (err) {
+        document.getElementById("recStatus").textContent = "Không truy cập được micro — hãy chọn 'Tải file âm thanh/video'.";
+      }
+    }
+
+    function stopRecord() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+      document.getElementById("recBtn").classList.remove("hidden");
+      document.getElementById("stopBtn").classList.add("hidden");
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const isVideo = file.type && file.type.startsWith("video/");
+      const url = URL.createObjectURL(file);
+      currentCard.mediaUrl = url;
+      currentCard.mediaType = isVideo ? "video" : "audio";
+      currentCard.mediaName = file.name;
+      const aud = document.getElementById("previewAudio");
+      const vid = document.getElementById("previewVideo");
+      if (isVideo) {
+        vid.src = url;
+        vid.classList.remove("hidden");
+        aud.classList.add("hidden");
+      } else {
+        aud.src = url;
+        aud.classList.remove("hidden");
+        vid.classList.add("hidden");
+      }
+      document.getElementById("recStatus").textContent = "Đã tải tệp: " + file.name;
+      updateFileInfoOnly();
+    }
+
+    function drawFallbackQR(container, urlText) {
+      const img = document.createElement("img");
+      img.width = 184;
+      img.height = 184;
+      img.alt = "QR Code";
+      img.src = "https://quickchart.io/qr?size=184&text=" + encodeURIComponent(urlText.slice(0, 450));
+      container.appendChild(img);
+    }
+
+    function renderQRCode(urlText) {
+      const container = document.getElementById("qrContainer");
+      container.innerHTML = "";
+      try {
+        if (typeof QRCode === "function") {
+          new QRCode(container, {
+            text: urlText.slice(0, 450),
+            width: 184,
+            height: 184,
+            colorDark: "#1B3632",
+            colorLight: "#FFFFFF",
+            correctLevel: QRCode.CorrectLevel.L
+          });
+          setTimeout(() => {
+            if (!container.querySelector("canvas") && !container.querySelector("img")) {
+              drawFallbackQR(container, urlText);
+            }
+          }, 120);
+          return;
+        }
+      } catch (e) {}
+      drawFallbackQR(container, urlText);
+    }
+
+    function generateQR() {
+      const rawPin = (document.getElementById("pinInput").value || "1234").replace(/\D/g, "");
+      const pin = (rawPin || "1234").padEnd(4, "0").slice(0, 4);
+      currentCard.theme = document.getElementById("themeSelect").value;
+      currentCard.pin = pin;
+      currentCard.sender = document.getElementById("senderInput").value.trim() || "Người gửi";
+      currentCard.recipient = document.getElementById("recipientInput").value.trim() || "Người nhận";
+      currentCard.message = (document.getElementById("messageInput").value.trim() || "Gửi bạn lời chúc tốt đẹp nhất!").slice(0, 140);
+      currentCard.id = "VC-" + Math.floor(1000 + Math.random() * 9000);
+
+      document.getElementById("pinDisplay").textContent = `Mã PIN mở khóa: ${currentCard.pin}`;
+      updateFileInfoOnly();
+
+      const baseUrl = window.location.href.startsWith("http")
+        ? window.location.href.split("#")[0].split("?")[0]
+        : "https://nguyenkimngann0001-ship-it.github.io/voicecard/";
+
+      const targetUrl = `${baseUrl}?pin=${encodeURIComponent(currentCard.pin)}&from=${encodeURIComponent(currentCard.sender.slice(0, 24))}&to=${encodeURIComponent(currentCard.recipient.slice(0, 24))}&msg=${encodeURIComponent(currentCard.message)}`;
+
+      renderQRCode(targetUrl);
+      syncRecipientCard();
+    }
+
+    function downloadQR() {
+      const canvas = document.querySelector("#qrContainer canvas");
+      const img = document.querySelector("#qrContainer img");
+      const link = document.createElement("a");
+      link.download = `${currentCard.id}-QR.png`;
+      if (canvas) {
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } else if (img && img.src) {
+        link.href = img.src;
+        link.click();
+      }
+    }
+
+    function syncRecipientCard() {
+      document.getElementById("recThemeTag").textContent = currentCard.theme.toUpperCase();
+      document.getElementById("recGreeting").textContent = `Gửi tới ${currentCard.recipient}`;
+      document.getElementById("recHintDemo").textContent = `Nhập mã PIN 4 số để mở khóa lời nhắn (Gợi ý demo: ${currentCard.pin}).`;
+      document.getElementById("cardMeta").textContent = `Từ: ${currentCard.sender} • Mã thiệp: ${currentCard.id}`;
+      document.getElementById("cardText").textContent = currentCard.message;
+
+      const aud = document.getElementById("recAudio");
+      const vid = document.getElementById("recVideo");
+      const note = document.getElementById("mediaNote");
+      const srcUrl = currentCard.mediaUrl || document.getElementById("previewAudio").src;
+
+      if (currentCard.mediaType === "video" && srcUrl) {
+        vid.src = srcUrl;
+        vid.classList.remove("hidden");
+        aud.classList.add("hidden");
+        note.textContent = currentCard.mediaName ? `Đang phát tệp: ${currentCard.mediaName}` : "";
+      } else {
+        aud.classList.remove("hidden");
+        vid.classList.add("hidden");
+        if (srcUrl) {
+          aud.src = srcUrl;
+          note.textContent = currentCard.mediaName ? `Đang phát tệp: ${currentCard.mediaName}` : "";
+        } else {
+          note.textContent = "Khi quét bằng điện thoại khác, hãy bấm Thu âm hoặc Tải file âm thanh/video trên thiết bị đang mở để phát tệp riêng.";
+        }
+      }
+    }
+
+    function switchTab(tab) {
+      const isSender = tab === "sender";
+      document.getElementById("senderView").classList.toggle("hidden", !isSender);
+      document.getElementById("recipientView").classList.toggle("hidden", isSender);
+      document.getElementById("tabSender").classList.toggle("active", isSender);
+      document.getElementById("tabRecipient").classList.toggle("active", !isSender);
+      if (!isSender) syncRecipientCard();
+    }
+
+    function openRecipientDemo() {
+      lockCardAgain();
+      switchTab("recipient");
+      const digits = document.querySelectorAll(".pin-digit");
+      digits.forEach((d, idx) => d.value = currentCard.pin[idx] || "");
+      unlockCard();
+    }
+
+    function movePin(el, index) {
+      el.value = el.value.replace(/\D/g, "");
+      const digits = document.querySelectorAll(".pin-digit");
+      if (el.value && index < 3) digits[index + 1].focus();
+      if (Array.from(digits).every(d => d.value.length === 1)) unlockCard();
+    }
+
+    function unlockCard() {
+      const entered = Array.from(document.querySelectorAll(".pin-digit")).map(d => d.value).join("");
+      const errEl = document.getElementById("pinError");
+      if (entered === currentCard.pin) {
+        errEl.textContent = "";
+        document.getElementById("pinLockBox").classList.add("hidden");
+        document.getElementById("unlockedBox").classList.remove("hidden");
+        syncRecipientCard();
+      } else {
+        errEl.textContent = "Mã PIN chưa đúng, vui lòng thử lại.";
+      }
+    }
+
+    function lockCardAgain() {
+      document.getElementById("unlockedBox").classList.add("hidden");
+      document.getElementById("pinLockBox").classList.remove("hidden");
+      document.getElementById("reactionMsg").textContent = "";
+      document.querySelectorAll(".pin-digit").forEach(d => d.value = "");
+    }
+
+    function sendReaction() {
+      document.getElementById("reactionMsg").textContent = `Đã gửi lời cảm ơn tới ${currentCard.sender}!`;
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("to") || params.get("msg") || params.get("pin")) {
+          currentCard.pin = params.get("pin") || currentCard.pin;
+          currentCard.sender = params.get("from") || currentCard.sender;
+          currentCard.recipient = params.get("to") || currentCard.recipient;
+          currentCard.message = params.get("msg") || currentCard.message;
+          document.getElementById("pinInput").value = currentCard.pin;
+          document.getElementById("senderInput").value = currentCard.sender;
+          document.getElementById("recipientInput").value = currentCard.recipient;
+          document.getElementById("messageInput").value = currentCard.message;
+          generateQR();
+          switchTab("recipient");
+          return;
+        }
+      } catch (e) {}
+      generateQR();
+    });
+  </script>
+</body>
+</html>
