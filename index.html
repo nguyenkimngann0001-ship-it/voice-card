@@ -63,6 +63,7 @@
       font-size: 14px; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;
     }
     .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
     .btn-primary { background: var(--accent); color: #fff; width: 100%; justify-content: center; padding: 13px; font-size: 15px; }
     .btn-forest { background: var(--forest); color: #fff; }
     .btn-outline { background: #fff; color: var(--ink); border: 1px solid var(--border); }
@@ -205,13 +206,13 @@
                 <input type="file" id="mediaFile" accept="audio/*,video/*" style="display:none" onchange="handleFileUpload(event)" />
               </label>
             </div>
-            <div id="recStatus" class="status-msg">Chưa có file ghi âm — bấm Thu âm để tự động cập nhật mã QR.</div>
+            <div id="recStatus" class="status-msg">Chưa có file ghi âm — bấm Thu âm để tải file tạm & cập nhật mã QR.</div>
             <audio id="previewAudio" controls class="hidden"></audio>
             <video id="previewVideo" controls class="hidden"></video>
           </div>
         </div>
 
-        <button type="button" class="btn btn-primary" onclick="generateQR(true)">Cập nhật Thiệp & Sinh Mã QR</button>
+        <button type="button" class="btn btn-primary" id="genBtn" onclick="generateQR(true)">Cập nhật Thiệp & Sinh Mã QR</button>
       </div>
 
       <div class="panel qr-card">
@@ -227,7 +228,7 @@
           <button type="button" class="btn btn-outline" onclick="openRecipientDemo()">Quét thử QR ngay</button>
         </div>
         <p class="hint">
-          Bản ghi âm được lưu theo mã thiệp trên trình duyệt này để mở lại đầy đủ; nếu quét bằng thiết bị khác, chỉ đoạn ghi âm cực ngắn mới nhúng vừa trong mã QR.
+          Chế độ test nhanh: file thu âm/tải lên được đẩy lên host lưu tạm để điện thoại quét QR tải về phát được.
         </p>
       </div>
     </section>
@@ -263,8 +264,8 @@
             </div>
           </div>
 
-          <audio id="recAudio" controls></audio>
-          <video id="recVideo" controls class="hidden"></video>
+          <audio id="recAudio" controls playsinline></audio>
+          <video id="recVideo" controls playsinline class="hidden"></video>
           <div id="mediaNote" class="hint"></div>
 
           <div style="margin-top:18px; display:flex; gap:8px; flex-wrap:wrap;">
@@ -287,36 +288,14 @@
       message: "Chúc mừng cậu đã hoàn thành chặng đường đại học thật rực rỡ! Nghe lời nhắn thoại mình thu riêng cho cậu nhé.",
       mediaType: "audio",
       mediaUrl: "",
-      mediaBase64: "",
+      mediaRemoteUrl: "",
       mediaName: ""
     };
 
     let mediaRecorder = null;
     let chunks = [];
     let isScannedRecipientMode = false;
-
-    function saveMediaToStorage(cardId, dataUrl, mediaType, mediaName) {
-      if (!dataUrl) return;
-      try {
-        localStorage.setItem("voicecard_media_" + cardId, JSON.stringify({
-          dataUrl,
-          mediaType: mediaType || "audio",
-          mediaName: mediaName || "Lời nhắn giọng nói"
-        }));
-      } catch (e) {
-        // Bỏ qua nếu vượt dung lượng localStorage của trình duyệt
-      }
-    }
-
-    function loadMediaFromStorage(cardId) {
-      if (!cardId) return null;
-      try {
-        const raw = localStorage.getItem("voicecard_media_" + cardId);
-        return raw ? JSON.parse(raw) : null;
-      } catch (e) {
-        return null;
-      }
-    }
+    let isUploadingMedia = false;
 
     function updateFileInfoOnly() {
       const fileInfo = currentCard.mediaName ? ` • Tệp: ${currentCard.mediaName}` : "";
@@ -346,12 +325,54 @@
       generateQR(true);
     }
 
-    function blobToDataUrl(blob) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result || "");
-        reader.readAsDataURL(blob);
-      });
+    // Đẩy file tạm lên tmpfiles.org (có fallback 0x0.st) để test trên điện thoại
+    async function uploadTempMedia(blob, filename) {
+      isUploadingMedia = true;
+      document.getElementById("genBtn").disabled = true;
+      document.getElementById("recStatus").textContent = "⏳ Đang tải file tạm để gắn vào mã QR...";
+
+      let remoteUrl = "";
+
+      // Thử tmpfiles.org
+      try {
+        const fd = new FormData();
+        fd.append("file", blob, filename || "voice-message.webm");
+        const res = await fetch("https://tmpfiles.org/api/v1/upload", { method: "POST", body: fd });
+        if (res.ok) {
+          const data = await res.json();
+          const rawUrl = data && data.data && data.data.url ? data.data.url : "";
+          if (rawUrl) {
+            // Chuyển /12345/file.webm thành /dl/12345/file.webm để tải trực tiếp
+            remoteUrl = rawUrl.replace(/^https?:\/\/tmpfiles\.org\//, "https://tmpfiles.org/dl/");
+          }
+        }
+      } catch (e) {}
+
+      // Dự phòng 0x0.st nếu tmpfiles lỗi/bị chặn
+      if (!remoteUrl) {
+        try {
+          const fd2 = new FormData();
+          fd2.append("file", blob, filename || "voice-message.webm");
+          const res2 = await fetch("https://0x0.st", { method: "POST", body: fd2 });
+          if (res2.ok) {
+            const txt = (await res2.text()).trim();
+            if (txt.startsWith("http")) remoteUrl = txt;
+          }
+        } catch (e) {}
+      }
+
+      isUploadingMedia = false;
+      document.getElementById("genBtn").disabled = false;
+
+      if (remoteUrl) {
+        currentCard.mediaRemoteUrl = remoteUrl;
+        document.getElementById("recStatus").textContent = "✅ Đã tải file tạm & cập nhật mã QR cho điện thoại!";
+        generateQR(true);
+      } else {
+        currentCard.mediaRemoteUrl = "";
+        document.getElementById("recStatus").textContent = "⚠️ Không tải được lên host tạm (mạng/trình duyệt chặn) — vẫn phát được trên máy hiện tại.";
+        generateQR(true);
+      }
     }
 
     async function toggleRecord() {
@@ -361,24 +382,22 @@
         mediaRecorder = new MediaRecorder(stream);
         mediaRecorder.ondataavailable = e => chunks.push(e.data);
         mediaRecorder.onstop = async () => {
-          const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+          const mime = mediaRecorder.mimeType || "audio/webm";
+          const ext = mime.includes("mp4") ? "m4a" : "webm";
+          const blob = new Blob(chunks, { type: mime });
           const url = URL.createObjectURL(blob);
-          const dataUrl = await blobToDataUrl(blob);
 
           currentCard.mediaUrl = url;
-          currentCard.mediaBase64 = dataUrl;
           currentCard.mediaType = "audio";
-          currentCard.mediaName = "Ghi âm giọng nói";
-          saveMediaToStorage(currentCard.id, dataUrl, "audio", currentCard.mediaName);
+          currentCard.mediaName = "Ghi âm giọng nói." + ext;
 
           const aud = document.getElementById("previewAudio");
           aud.classList.remove("hidden");
           aud.src = url;
           document.getElementById("previewVideo").classList.add("hidden");
-          document.getElementById("recStatus").textContent = "✅ Đã thu âm xong và cập nhật mã QR!";
 
-          generateQR(true);
           stream.getTracks().forEach(t => t.stop());
+          await uploadTempMedia(blob, currentCard.mediaName);
         };
         mediaRecorder.start();
         document.getElementById("recBtn").classList.add("hidden");
@@ -400,13 +419,10 @@
       if (!file) return;
       const isVideo = file.type && file.type.startsWith("video/");
       const url = URL.createObjectURL(file);
-      const dataUrl = await blobToDataUrl(file);
 
       currentCard.mediaUrl = url;
-      currentCard.mediaBase64 = dataUrl;
       currentCard.mediaType = isVideo ? "video" : "audio";
       currentCard.mediaName = file.name;
-      saveMediaToStorage(currentCard.id, dataUrl, currentCard.mediaType, currentCard.mediaName);
 
       const aud = document.getElementById("previewAudio");
       const vid = document.getElementById("previewVideo");
@@ -419,8 +435,8 @@
         aud.classList.remove("hidden");
         vid.classList.add("hidden");
       }
-      document.getElementById("recStatus").textContent = "✅ Đã tải tệp: " + file.name + " và cập nhật mã QR!";
-      generateQR(true);
+
+      await uploadTempMedia(file, file.name);
     }
 
     function drawFallbackQR(container, urlText) {
@@ -465,10 +481,6 @@
       currentCard.recipient = document.getElementById("recipientInput").value.trim() || "Người nhận";
       currentCard.message = (document.getElementById("messageInput").value.trim() || "Gửi bạn lời chúc tốt đẹp nhất!").slice(0, 140);
 
-      if (currentCard.mediaBase64) {
-        saveMediaToStorage(currentCard.id, currentCard.mediaBase64, currentCard.mediaType, currentCard.mediaName);
-      }
-
       document.getElementById("pinDisplay").textContent = `Mã PIN mở khóa: ${currentCard.pin}`;
       updateFileInfoOnly();
 
@@ -478,11 +490,8 @@
 
       let targetUrl = `${baseUrl}?mode=recipient&id=${encodeURIComponent(currentCard.id)}&pin=${encodeURIComponent(currentCard.pin)}&theme=${encodeURIComponent(currentCard.theme)}&from=${encodeURIComponent(currentCard.sender.slice(0, 24))}&to=${encodeURIComponent(currentCard.recipient.slice(0, 24))}&msg=${encodeURIComponent(currentCard.message)}&mtype=${encodeURIComponent(currentCard.mediaType)}&mname=${encodeURIComponent(currentCard.mediaName)}`;
 
-      const statusEl = document.getElementById("qrUpdateStatus");
-      let embeddedInQR = false;
-      if (currentCard.mediaBase64 && currentCard.mediaBase64.length < 1800) {
-        targetUrl += `&audio=${encodeURIComponent(currentCard.mediaBase64)}`;
-        embeddedInQR = true;
+      if (currentCard.mediaRemoteUrl) {
+        targetUrl += `&audioUrl=${encodeURIComponent(currentCard.mediaRemoteUrl)}`;
       }
 
       renderQRCode(targetUrl);
@@ -490,14 +499,11 @@
 
       if (highlight) {
         const box = document.getElementById("qrContainer");
+        const statusEl = document.getElementById("qrUpdateStatus");
         box.classList.add("updated");
-        if (currentCard.mediaName && embeddedInQR) {
-          statusEl.textContent = `✨ QR đã nhúng âm thanh "${currentCard.mediaName}"!`;
-        } else if (currentCard.mediaName) {
-          statusEl.textContent = "✨ QR đã cập nhật (âm thanh lưu theo mã thiệp trên trình duyệt này; quét máy khác cần file ngắn hơn).";
-        } else {
-          statusEl.textContent = "✨ Mã QR đã được cập nhật!";
-        }
+        statusEl.textContent = currentCard.mediaRemoteUrl
+          ? "✨ QR đã gắn link âm thanh tạm — quét trên điện thoại để test!"
+          : "✨ Mã QR đã được cập nhật!";
         setTimeout(() => box.classList.remove("updated"), 800);
       }
     }
@@ -528,7 +534,7 @@
       const note = document.getElementById("mediaNote");
       const waveBox = document.getElementById("waveBox");
       const waveTitle = document.getElementById("waveTitle");
-      const srcUrl = currentCard.mediaBase64 || currentCard.mediaUrl || document.getElementById("previewAudio").src;
+      const srcUrl = currentCard.mediaRemoteUrl || currentCard.mediaUrl || document.getElementById("previewAudio").src;
 
       if (currentCard.mediaType === "video" && srcUrl) {
         vid.src = srcUrl;
@@ -542,12 +548,12 @@
         vid.classList.add("hidden");
         waveBox.classList.remove("hidden");
         waveTitle.textContent = `🎧 ${currentCard.mediaName || "Lời nhắn giọng nói"}`;
-        note.textContent = "Bấm phát hoặc đợi tự động phát để nghe lời nhắn.";
+        note.textContent = "Bấm phát (hoặc đợi tự động phát) để nghe lời nhắn.";
       } else {
         aud.classList.add("hidden");
         vid.classList.add("hidden");
         waveBox.classList.add("hidden");
-        note.textContent = "Không tìm thấy tệp âm thanh trên thiết bị này (nếu quét từ máy khác, đoạn ghi âm dài chưa thể nhúng trực tiếp vào mã QR).";
+        note.textContent = "Không tìm thấy tệp âm thanh cho thiệp này.";
       }
     }
 
@@ -653,17 +659,7 @@
           currentCard.message = params.get("msg") || currentCard.message;
           currentCard.mediaType = params.get("mtype") || "audio";
           currentCard.mediaName = params.get("mname") || "Lời nhắn giọng nói";
-
-          if (params.get("audio")) {
-            currentCard.mediaBase64 = params.get("audio");
-          } else {
-            const saved = loadMediaFromStorage(currentCard.id);
-            if (saved && saved.dataUrl) {
-              currentCard.mediaBase64 = saved.dataUrl;
-              currentCard.mediaType = saved.mediaType || currentCard.mediaType;
-              currentCard.mediaName = saved.mediaName || currentCard.mediaName;
-            }
-          }
+          currentCard.mediaRemoteUrl = params.get("audioUrl") || "";
 
           document.body.classList.add("recipient-only");
           document.getElementById("navTabs").classList.add("hidden");
