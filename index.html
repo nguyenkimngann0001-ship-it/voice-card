@@ -206,7 +206,7 @@
                 <input type="file" id="mediaFile" accept="audio/*,video/*" style="display:none" onchange="handleFileUpload(event)" />
               </label>
             </div>
-            <div id="recStatus" class="status-msg">Chưa có file ghi âm — bấm Thu âm để tải file tạm & cập nhật mã QR.</div>
+            <div id="recStatus" class="status-msg">Chưa có file ghi âm — bấm Thu âm để tải lên & cập nhật mã QR.</div>
             <audio id="previewAudio" controls class="hidden"></audio>
             <video id="previewVideo" controls class="hidden"></video>
           </div>
@@ -228,7 +228,7 @@
           <button type="button" class="btn btn-outline" onclick="openRecipientDemo()">Quét thử QR ngay</button>
         </div>
         <p class="hint">
-          Chế độ test nhanh: file thu âm/tải lên được đẩy lên host lưu tạm để điện thoại quét QR tải về phát được.
+          Đã kết nối Cloudinary (<code>buwnk3pf</code> / <code>ng09dphm</code>) — quét mã QR trên điện thoại sẽ phát được âm thanh.
         </p>
       </div>
     </section>
@@ -279,6 +279,9 @@
   </div>
 
   <script>
+    const CLOUDINARY_CLOUD_NAME = "buwnk3pf";
+    const CLOUDINARY_UPLOAD_PRESET = "ng09dphm";
+
     let currentCard = {
       id: "VC-" + Math.floor(1000 + Math.random() * 9000),
       theme: "Tốt nghiệp",
@@ -295,7 +298,12 @@
     let mediaRecorder = null;
     let chunks = [];
     let isScannedRecipientMode = false;
-    let isUploadingMedia = false;
+
+    function normalizeCloudinaryAudioUrl(url, mediaType) {
+      if (!url || mediaType === "video") return url;
+      // Ép đuôi .mp3 trên Cloudinary để phát ổn định hơn trên các trình duyệt di động
+      return url.replace(/\.(webm|ogg|m4a|wav|aac)(\?.*)?$/i, ".mp3");
+    }
 
     function updateFileInfoOnly() {
       const fileInfo = currentCard.mediaName ? ` • Tệp: ${currentCard.mediaName}` : "";
@@ -325,52 +333,33 @@
       generateQR(true);
     }
 
-    // Đẩy file tạm lên tmpfiles.org (có fallback 0x0.st) để test trên điện thoại
-    async function uploadTempMedia(blob, filename) {
-      isUploadingMedia = true;
+    async function uploadToCloudinary(blob, filename) {
       document.getElementById("genBtn").disabled = true;
-      document.getElementById("recStatus").textContent = "⏳ Đang tải file tạm để gắn vào mã QR...";
+      document.getElementById("recStatus").textContent = "⏳ Đang tải âm thanh lên Cloudinary...";
 
-      let remoteUrl = "";
-
-      // Thử tmpfiles.org
       try {
         const fd = new FormData();
         fd.append("file", blob, filename || "voice-message.webm");
-        const res = await fetch("https://tmpfiles.org/api/v1/upload", { method: "POST", body: fd });
-        if (res.ok) {
-          const data = await res.json();
-          const rawUrl = data && data.data && data.data.url ? data.data.url : "";
-          if (rawUrl) {
-            // Chuyển /12345/file.webm thành /dl/12345/file.webm để tải trực tiếp
-            remoteUrl = rawUrl.replace(/^https?:\/\/tmpfiles\.org\//, "https://tmpfiles.org/dl/");
-          }
+        fd.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+        fd.append("folder", "voicecard");
+
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
+          method: "POST",
+          body: fd
+        });
+        const data = await res.json();
+        if (res.ok && data.secure_url) {
+          currentCard.mediaRemoteUrl = normalizeCloudinaryAudioUrl(data.secure_url, currentCard.mediaType);
+          document.getElementById("recStatus").textContent = "✅ Đã tải lên Cloudinary & gắn link vào mã QR!";
+        } else {
+          currentCard.mediaRemoteUrl = "";
+          document.getElementById("recStatus").textContent = "⚠️ Lỗi tải lên Cloudinary: " + (data.error?.message || "Kiểm tra Preset");
         }
-      } catch (e) {}
-
-      // Dự phòng 0x0.st nếu tmpfiles lỗi/bị chặn
-      if (!remoteUrl) {
-        try {
-          const fd2 = new FormData();
-          fd2.append("file", blob, filename || "voice-message.webm");
-          const res2 = await fetch("https://0x0.st", { method: "POST", body: fd2 });
-          if (res2.ok) {
-            const txt = (await res2.text()).trim();
-            if (txt.startsWith("http")) remoteUrl = txt;
-          }
-        } catch (e) {}
-      }
-
-      isUploadingMedia = false;
-      document.getElementById("genBtn").disabled = false;
-
-      if (remoteUrl) {
-        currentCard.mediaRemoteUrl = remoteUrl;
-        document.getElementById("recStatus").textContent = "✅ Đã tải file tạm & cập nhật mã QR cho điện thoại!";
-        generateQR(true);
-      } else {
+      } catch (e) {
         currentCard.mediaRemoteUrl = "";
-        document.getElementById("recStatus").textContent = "⚠️ Không tải được lên host tạm (mạng/trình duyệt chặn) — vẫn phát được trên máy hiện tại.";
+        document.getElementById("recStatus").textContent = "⚠️ Không kết nối được Cloudinary.";
+      } finally {
+        document.getElementById("genBtn").disabled = false;
         generateQR(true);
       }
     }
@@ -397,7 +386,7 @@
           document.getElementById("previewVideo").classList.add("hidden");
 
           stream.getTracks().forEach(t => t.stop());
-          await uploadTempMedia(blob, currentCard.mediaName);
+          await uploadToCloudinary(blob, currentCard.mediaName);
         };
         mediaRecorder.start();
         document.getElementById("recBtn").classList.add("hidden");
@@ -436,7 +425,7 @@
         vid.classList.add("hidden");
       }
 
-      await uploadTempMedia(file, file.name);
+      await uploadToCloudinary(file, file.name);
     }
 
     function drawFallbackQR(container, urlText) {
@@ -502,7 +491,7 @@
         const statusEl = document.getElementById("qrUpdateStatus");
         box.classList.add("updated");
         statusEl.textContent = currentCard.mediaRemoteUrl
-          ? "✨ QR đã gắn link âm thanh tạm — quét trên điện thoại để test!"
+          ? "✨ QR đã gắn link âm thanh — quét trên điện thoại để nghe!"
           : "✨ Mã QR đã được cập nhật!";
         setTimeout(() => box.classList.remove("updated"), 800);
       }
