@@ -529,7 +529,7 @@
         vid.classList.remove("hidden");
         aud.classList.add("hidden");
         waveBox.classList.add("hidden");
-        note.textContent = currentCard.mediaName ? `🎬 Video đính kèm: ${currentCard.mediaName}` : "";
+        note.textContent = srcUrl;
       } else if (srcUrl) {
         aud.src = srcUrl;
         aud.load();
@@ -644,8 +644,9 @@
       });
       aud.addEventListener("error", () => {
         wave.classList.remove("playing");
+        const code = aud.error ? aud.error.code : 0;
         badge.textContent = "Không phát được";
-        note.textContent = "Không tải/phát được tệp này. Hãy thử tải một file .mp3 có sẵn.";
+        note.textContent = `Lỗi phát âm thanh (mã ${code}). Tệp .m4a hoặc liên kết có thể không được trình duyệt hỗ trợ phát trực tiếp.`;
       });
 
       try {
