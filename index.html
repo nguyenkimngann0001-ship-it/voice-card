@@ -86,7 +86,6 @@
     .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
     .status-msg { font-size: 13px; color: var(--forest); font-weight: 600; margin-top: 6px; }
 
-    /* Recipient View & Rich Effects */
     .vault-wrap {
       max-width: 520px; margin: 0 auto; text-align: center; position: relative; overflow: hidden;
       border: 1.5px solid #E6D5A8; box-shadow: 0 14px 36px rgba(27, 54, 50, 0.08);
@@ -115,12 +114,14 @@
       font-weight: 700; padding: 4px 12px; border-radius: 999px; margin-bottom: 10px; letter-spacing: 0.5px;
     }
 
-    /* Sóng âm chuyển động khi phát ghi âm */
     .wave-wrap {
-      background: rgba(255, 255, 255, 0.72); border: 1px solid #E6D5A8;
+      background: rgba(255, 255, 255, 0.75); border: 1px solid #E6D5A8;
       border-radius: 14px; padding: 12px; margin: 12px 0;
     }
-    .wave-label { font-size: 12px; font-weight: 700; color: var(--forest); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .wave-label {
+      font-size: 12px; font-weight: 700; color: var(--forest);
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+    }
     .sound-wave { display: flex; align-items: center; justify-content: center; gap: 5px; height: 30px; }
     .sound-wave span {
       display: block; width: 5px; height: 7px; background: var(--accent); border-radius: 999px; transition: height 0.2s ease;
@@ -152,7 +153,6 @@
       </div>
     </header>
 
-    <!-- KHU VỰC TẠO THIỆP & LẤY MÃ QR -->
     <section id="senderView" class="grid">
       <div class="panel">
         <h2>Thiết kế lời nhắn cho thiệp</h2>
@@ -227,12 +227,11 @@
           <button type="button" class="btn btn-outline" onclick="openRecipientDemo()">Quét thử QR ngay</button>
         </div>
         <p class="hint">
-          Khi thu âm hoặc tải tệp lên, <strong>Mã QR sẽ tự động hiện & cập nhật ngay</strong>. Khi người nhận quét QR sẽ chỉ thấy màn hình mở thiệp.
+          Bản ghi âm được lưu theo mã thiệp trên trình duyệt này để mở lại đầy đủ; nếu quét bằng thiết bị khác, chỉ đoạn ghi âm cực ngắn mới nhúng vừa trong mã QR.
         </p>
       </div>
     </section>
 
-    <!-- KHU VỰC NGƯỜI NHẬN THIỆP (KHI QUÉT QR CHỈ HIỆN PHẦN NÀY) -->
     <section id="recipientView" class="hidden">
       <div class="panel vault-wrap">
         <span class="tag" id="recThemeTag">THIỆP GIỌNG NÓI</span>
@@ -296,6 +295,29 @@
     let chunks = [];
     let isScannedRecipientMode = false;
 
+    function saveMediaToStorage(cardId, dataUrl, mediaType, mediaName) {
+      if (!dataUrl) return;
+      try {
+        localStorage.setItem("voicecard_media_" + cardId, JSON.stringify({
+          dataUrl,
+          mediaType: mediaType || "audio",
+          mediaName: mediaName || "Lời nhắn giọng nói"
+        }));
+      } catch (e) {
+        // Bỏ qua nếu vượt dung lượng localStorage của trình duyệt
+      }
+    }
+
+    function loadMediaFromStorage(cardId) {
+      if (!cardId) return null;
+      try {
+        const raw = localStorage.getItem("voicecard_media_" + cardId);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
     function updateFileInfoOnly() {
       const fileInfo = currentCard.mediaName ? ` • Tệp: ${currentCard.mediaName}` : "";
       document.getElementById("qrLinkText").textContent = `Mã thiệp: ${currentCard.id} — Gửi ${currentCard.recipient}${fileInfo}`;
@@ -347,6 +369,7 @@
           currentCard.mediaBase64 = dataUrl;
           currentCard.mediaType = "audio";
           currentCard.mediaName = "Ghi âm giọng nói";
+          saveMediaToStorage(currentCard.id, dataUrl, "audio", currentCard.mediaName);
 
           const aud = document.getElementById("previewAudio");
           aud.classList.remove("hidden");
@@ -383,6 +406,7 @@
       currentCard.mediaBase64 = dataUrl;
       currentCard.mediaType = isVideo ? "video" : "audio";
       currentCard.mediaName = file.name;
+      saveMediaToStorage(currentCard.id, dataUrl, currentCard.mediaType, currentCard.mediaName);
 
       const aud = document.getElementById("previewAudio");
       const vid = document.getElementById("previewVideo");
@@ -441,6 +465,10 @@
       currentCard.recipient = document.getElementById("recipientInput").value.trim() || "Người nhận";
       currentCard.message = (document.getElementById("messageInput").value.trim() || "Gửi bạn lời chúc tốt đẹp nhất!").slice(0, 140);
 
+      if (currentCard.mediaBase64) {
+        saveMediaToStorage(currentCard.id, currentCard.mediaBase64, currentCard.mediaType, currentCard.mediaName);
+      }
+
       document.getElementById("pinDisplay").textContent = `Mã PIN mở khóa: ${currentCard.pin}`;
       updateFileInfoOnly();
 
@@ -451,9 +479,10 @@
       let targetUrl = `${baseUrl}?mode=recipient&id=${encodeURIComponent(currentCard.id)}&pin=${encodeURIComponent(currentCard.pin)}&theme=${encodeURIComponent(currentCard.theme)}&from=${encodeURIComponent(currentCard.sender.slice(0, 24))}&to=${encodeURIComponent(currentCard.recipient.slice(0, 24))}&msg=${encodeURIComponent(currentCard.message)}&mtype=${encodeURIComponent(currentCard.mediaType)}&mname=${encodeURIComponent(currentCard.mediaName)}`;
 
       const statusEl = document.getElementById("qrUpdateStatus");
-      // Nếu bản ghi âm đủ gọn để nhúng thẳng vào QR (< 1600 ký tự) thì gắn luôn vào URL
-      if (currentCard.mediaBase64 && currentCard.mediaBase64.length < 1500) {
+      let embeddedInQR = false;
+      if (currentCard.mediaBase64 && currentCard.mediaBase64.length < 1800) {
         targetUrl += `&audio=${encodeURIComponent(currentCard.mediaBase64)}`;
+        embeddedInQR = true;
       }
 
       renderQRCode(targetUrl);
@@ -462,10 +491,10 @@
       if (highlight) {
         const box = document.getElementById("qrContainer");
         box.classList.add("updated");
-        if (currentCard.mediaBase64 && currentCard.mediaBase64.length >= 1500) {
-          statusEl.textContent = "✨ QR đã cập nhật (ghi âm hơi dài nên dùng bản ghi âm hiện tại khi quét thử).";
+        if (currentCard.mediaName && embeddedInQR) {
+          statusEl.textContent = `✨ QR đã nhúng âm thanh "${currentCard.mediaName}"!`;
         } else if (currentCard.mediaName) {
-          statusEl.textContent = `✨ Mã QR đã hiện & nhúng "${currentCard.mediaName}"!`;
+          statusEl.textContent = "✨ QR đã cập nhật (âm thanh lưu theo mã thiệp trên trình duyệt này; quét máy khác cần file ngắn hơn).";
         } else {
           statusEl.textContent = "✨ Mã QR đã được cập nhật!";
         }
@@ -518,7 +547,7 @@
         aud.classList.add("hidden");
         vid.classList.add("hidden");
         waveBox.classList.add("hidden");
-        note.textContent = "Thiệp này chỉ có lời nhắn văn bản.";
+        note.textContent = "Không tìm thấy tệp âm thanh trên thiết bị này (nếu quét từ máy khác, đoạn ghi âm dài chưa thể nhúng trực tiếp vào mã QR).";
       }
     }
 
@@ -624,11 +653,18 @@
           currentCard.message = params.get("msg") || currentCard.message;
           currentCard.mediaType = params.get("mtype") || "audio";
           currentCard.mediaName = params.get("mname") || "Lời nhắn giọng nói";
+
           if (params.get("audio")) {
             currentCard.mediaBase64 = params.get("audio");
+          } else {
+            const saved = loadMediaFromStorage(currentCard.id);
+            if (saved && saved.dataUrl) {
+              currentCard.mediaBase64 = saved.dataUrl;
+              currentCard.mediaType = saved.mediaType || currentCard.mediaType;
+              currentCard.mediaName = saved.mediaName || currentCard.mediaName;
+            }
           }
 
-          // Ẩn hoàn toàn mục Tạo thiệp & Lấy QR + nút chuyển tab
           document.body.classList.add("recipient-only");
           document.getElementById("navTabs").classList.add("hidden");
           document.getElementById("senderView").classList.add("hidden");
