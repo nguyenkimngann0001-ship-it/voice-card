@@ -73,18 +73,18 @@
 
     .qr-card { text-align: center; }
     .qr-box {
-      display: inline-flex; justify-content: center; align-items: center; padding: 14px;
+      display: inline-flex; justify-content: center; align-items: center; padding: 16px;
       background: #fff; border: 2px solid var(--accent-soft); border-radius: 16px;
-      margin: 12px auto; width: 220px; height: 220px; transition: transform 0.3s ease, border-color 0.3s ease;
+      margin: 12px auto; width: 232px; height: 232px; transition: transform 0.3s ease, border-color 0.3s ease;
     }
     .qr-box.updated { transform: scale(1.04); border-color: var(--accent); box-shadow: 0 0 20px rgba(184,134,11,0.25); }
-    .qr-box img, .qr-box canvas { display: block; width: 190px !important; height: 190px !important; }
+    .qr-box img, .qr-box canvas { display: block; width: 200px !important; height: 200px !important; }
     .pin-badge {
       display: inline-block; background: var(--accent-soft); color: var(--forest);
       padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-bottom: 10px;
     }
     .qr-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
-    .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; word-break: break-all; }
+    .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; word-break: break-word; }
     .status-msg { font-size: 13px; color: var(--forest); font-weight: 600; margin-top: 6px; word-break: break-word; }
 
     .vault-wrap {
@@ -206,8 +206,7 @@
                 <input type="file" id="mediaFile" accept="audio/*,video/*" style="display:none" onchange="handleFileUpload(event)" />
               </label>
             </div>
-            <div id="recStatus" class="status-msg">Chưa có file ghi âm — bấm Thu âm để tải lên & cập nhật mã QR.</div>
-            <div id="uploadedUrlBox" class="hint"></div>
+            <div id="recStatus" class="status-msg">Chưa có file ghi âm — bấm Thu âm hoặc chọn file để tự cập nhật QR.</div>
             <audio id="previewAudio" controls class="hidden"></audio>
             <video id="previewVideo" controls class="hidden"></video>
           </div>
@@ -297,6 +296,22 @@
     let chunks = [];
     let isScannedRecipientMode = false;
 
+    // Rút gọn link Cloudinary để mã QR ngắn, thoáng và cực kỳ dễ quét
+    function packCloudinaryPath(fullUrl) {
+      if (!fullUrl) return "";
+      const prefix = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/`;
+      if (fullUrl.startsWith(prefix)) {
+        return fullUrl.slice(prefix.length); // vd: video/upload/v123456/abc.mp3
+      }
+      return fullUrl;
+    }
+
+    function unpackCloudinaryPath(packed) {
+      if (!packed) return "";
+      if (packed.startsWith("http")) return packed;
+      return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/${packed}`;
+    }
+
     function updateFileInfoOnly() {
       const fileInfo = currentCard.mediaName ? ` • Tệp: ${currentCard.mediaName}` : "";
       document.getElementById("qrLinkText").textContent = `Mã thiệp: ${currentCard.id} — Gửi ${currentCard.recipient}${fileInfo}`;
@@ -326,10 +341,8 @@
     }
 
     async function uploadToCloudinary(blob, filename) {
-      const urlBox = document.getElementById("uploadedUrlBox");
       document.getElementById("genBtn").disabled = true;
       document.getElementById("recStatus").textContent = "⏳ Đang tải file lên Cloudinary...";
-      urlBox.textContent = "";
 
       try {
         const fd = new FormData();
@@ -343,8 +356,7 @@
         const data = await res.json();
         if (res.ok && data.secure_url) {
           currentCard.mediaRemoteUrl = data.secure_url;
-          document.getElementById("recStatus").textContent = "✅ Đã tải lên Cloudinary thành công!";
-          urlBox.textContent = "Link file: " + data.secure_url;
+          document.getElementById("recStatus").textContent = "✅ Đã tải lên thành công & cập nhật mã QR!";
         } else {
           currentCard.mediaRemoteUrl = "";
           const errDetail = data.error?.message || `HTTP ${res.status}`;
@@ -426,11 +438,12 @@
     }
 
     function drawFallbackQR(container, urlText) {
+      container.innerHTML = "";
       const img = document.createElement("img");
-      img.width = 190;
-      img.height = 190;
+      img.width = 200;
+      img.height = 200;
       img.alt = "QR Code";
-      img.src = "https://quickchart.io/qr?size=190&text=" + encodeURIComponent(urlText);
+      img.src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=" + encodeURIComponent(urlText);
       container.appendChild(img);
     }
 
@@ -441,8 +454,8 @@
         if (typeof QRCode === "function") {
           new QRCode(container, {
             text: urlText,
-            width: 190,
-            height: 190,
+            width: 200,
+            height: 200,
             colorDark: "#1B3632",
             colorLight: "#FFFFFF",
             correctLevel: QRCode.CorrectLevel.L
@@ -465,7 +478,7 @@
       currentCard.pin = pin;
       currentCard.sender = document.getElementById("senderInput").value.trim() || "Người gửi";
       currentCard.recipient = document.getElementById("recipientInput").value.trim() || "Người nhận";
-      currentCard.message = (document.getElementById("messageInput").value.trim() || "Gửi bạn lời chúc tốt đẹp nhất!").slice(0, 140);
+      currentCard.message = (document.getElementById("messageInput").value.trim() || "Gửi bạn lời chúc tốt đẹp nhất!").slice(0, 120);
 
       document.getElementById("pinDisplay").textContent = `Mã PIN mở khóa: ${currentCard.pin}`;
       updateFileInfoOnly();
@@ -474,12 +487,19 @@
         ? window.location.href.split("#")[0].split("?")[0]
         : "https://nguyenkimngann0001-ship-it.github.io/voicecard/";
 
-      let targetUrl = `${baseUrl}?mode=recipient&id=${encodeURIComponent(currentCard.id)}&pin=${encodeURIComponent(currentCard.pin)}&theme=${encodeURIComponent(currentCard.theme)}&from=${encodeURIComponent(currentCard.sender.slice(0, 24))}&to=${encodeURIComponent(currentCard.recipient.slice(0, 24))}&msg=${encodeURIComponent(currentCard.message)}&mtype=${encodeURIComponent(currentCard.mediaType)}&mname=${encodeURIComponent(currentCard.mediaName)}`;
-
+      // Sử dụng tham số rút gọn (p, th, f, t, m, mt, a) để QR cực kỳ thoáng & quét nhạy
+      const params = new URLSearchParams();
+      params.set("p", currentCard.pin);
+      params.set("th", currentCard.theme);
+      params.set("f", currentCard.sender.slice(0, 20));
+      params.set("t", currentCard.recipient.slice(0, 20));
+      params.set("m", currentCard.message);
+      if (currentCard.mediaType === "video") params.set("mt", "v");
       if (currentCard.mediaRemoteUrl) {
-        targetUrl += `&audioUrl=${encodeURIComponent(currentCard.mediaRemoteUrl)}`;
+        params.set("a", packCloudinaryPath(currentCard.mediaRemoteUrl));
       }
 
+      const targetUrl = `${baseUrl}?${params.toString()}`;
       renderQRCode(targetUrl);
       syncRecipientCard();
 
@@ -488,7 +508,7 @@
         const statusEl = document.getElementById("qrUpdateStatus");
         box.classList.add("updated");
         statusEl.textContent = currentCard.mediaRemoteUrl
-          ? "✨ QR đã gắn link âm thanh!"
+          ? "✨ QR đã sẵn sàng (đã rút gọn link để quét nhanh)!"
           : "✨ Mã QR đã được cập nhật!";
         setTimeout(() => box.classList.remove("updated"), 800);
       }
@@ -529,7 +549,7 @@
         vid.classList.remove("hidden");
         aud.classList.add("hidden");
         waveBox.classList.add("hidden");
-        note.textContent = srcUrl;
+        note.textContent = "Bấm nút ▶ trên khung video để xem lời nhắn.";
       } else if (srcUrl) {
         aud.src = srcUrl;
         aud.load();
@@ -538,12 +558,12 @@
         waveBox.classList.remove("hidden");
         waveTitle.textContent = `🎧 ${currentCard.mediaName || "Lời nhắn giọng nói"}`;
         badge.textContent = "Sẵn sàng phát";
-        note.textContent = srcUrl;
+        note.textContent = "Bấm nút ▶ trên thanh phát để nghe lời nhắn.";
       } else {
         aud.classList.add("hidden");
         vid.classList.add("hidden");
         waveBox.classList.add("hidden");
-        note.textContent = "Không có liên kết tệp âm thanh nào trong thiệp.";
+        note.textContent = "Thiệp này không đính kèm tệp âm thanh.";
       }
     }
 
@@ -644,24 +664,25 @@
       });
       aud.addEventListener("error", () => {
         wave.classList.remove("playing");
-        const code = aud.error ? aud.error.code : 0;
         badge.textContent = "Không phát được";
-        note.textContent = `Lỗi phát âm thanh (mã ${code}). Tệp .m4a hoặc liên kết có thể không được trình duyệt hỗ trợ phát trực tiếp.`;
+        note.textContent = "Không tải/phát được tệp này. Hãy thử tải một file .mp3 chuẩn.";
       });
 
       try {
         const params = new URLSearchParams(window.location.search);
-        if (params.get("mode") === "recipient" || params.get("to") || params.get("msg") || params.get("pin")) {
+        // Hỗ trợ cả tham số rút gọn mới (p, t, m, a) và tham số cũ
+        if (params.get("p") || params.get("t") || params.get("m") || params.get("mode") === "recipient" || params.get("pin")) {
           isScannedRecipientMode = true;
-          currentCard.id = params.get("id") || currentCard.id;
-          currentCard.pin = params.get("pin") || currentCard.pin;
-          currentCard.theme = params.get("theme") || currentCard.theme;
-          currentCard.sender = params.get("from") || currentCard.sender;
-          currentCard.recipient = params.get("to") || currentCard.recipient;
-          currentCard.message = params.get("msg") || currentCard.message;
-          currentCard.mediaType = params.get("mtype") || "audio";
+          currentCard.pin = params.get("p") || params.get("pin") || currentCard.pin;
+          currentCard.theme = params.get("th") || params.get("theme") || currentCard.theme;
+          currentCard.sender = params.get("f") || params.get("from") || currentCard.sender;
+          currentCard.recipient = params.get("t") || params.get("to") || currentCard.recipient;
+          currentCard.message = params.get("m") || params.get("msg") || currentCard.message;
+          currentCard.mediaType = (params.get("mt") === "v" || params.get("mtype") === "video") ? "video" : "audio";
           currentCard.mediaName = params.get("mname") || "Lời nhắn giọng nói";
-          currentCard.mediaRemoteUrl = params.get("audioUrl") || "";
+
+          const packedAudio = params.get("a") || params.get("audioUrl") || "";
+          currentCard.mediaRemoteUrl = unpackCloudinaryPath(packedAudio);
 
           document.body.classList.add("recipient-only");
           document.getElementById("navTabs").classList.add("hidden");
