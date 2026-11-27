@@ -80,7 +80,7 @@
     .qr-box {
       display: inline-flex; justify-content: center; align-items: center;
       padding: 16px; background: #fff; border: 2px solid var(--accent-soft);
-      border-radius: 16px; margin: 12px auto; min-height: 212px; min-width: 212px;
+      border-radius: 16px; margin: 12px auto; min-height: 216px; min-width: 216px;
     }
     .pin-badge {
       display: inline-block; background: var(--accent-soft); color: var(--forest);
@@ -90,7 +90,6 @@
     .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
     .status-msg { font-size: 13px; color: var(--forest); font-weight: 600; margin-top: 6px; }
 
-    /* Recipient View */
     .vault-wrap { max-width: 520px; margin: 0 auto; text-align: center; }
     .pin-inputs { display: flex; justify-content: center; gap: 10px; margin: 18px 0; }
     .pin-inputs input {
@@ -125,7 +124,6 @@
       </div>
     </header>
 
-    <!-- TAB 1: SENDER -->
     <section id="senderView" class="grid">
       <div class="panel">
         <h2>Thiết kế lời nhắn cho thiệp</h2>
@@ -199,12 +197,11 @@
           <button type="button" class="btn btn-outline" onclick="openRecipientDemo()">Giả lập quét QR</button>
         </div>
         <p class="hint">
-          Lưu ý: Nếu mở file trực tiếp từ máy tính (<code>file://</code>), điện thoại quét QR sẽ cần cùng mạng/host hoặc dùng nút <strong>Giả lập quét QR</strong> ngay trên màn hình để demo mượt nhất.
+          Quét mã QR bằng điện thoại sẽ mở thiệp kèm lời chúc & mã PIN. File âm thanh dài từ máy sẽ phát trực tiếp trên trình duyệt hiện tại.
         </p>
       </div>
     </section>
 
-    <!-- TAB 2: RECIPIENT -->
     <section id="recipientView" class="hidden">
       <div class="panel vault-wrap">
         <span class="tag" id="recThemeTag">THUỘC TÍNH THIỆP</span>
@@ -251,33 +248,6 @@
 
     let mediaRecorder = null;
     let chunks = [];
-
-    function createDemoBeepAudio() {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const dst = ctx.createMediaStreamDestination();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(523.25, ctx.currentTime);
-      osc.connect(dst);
-      osc.start();
-      const recorder = new MediaRecorder(dst.stream);
-      const localChunks = [];
-      recorder.ondataavailable = e => localChunks.push(e.data);
-      recorder.onstop = () => {
-        const blob = new Blob(localChunks, { type: "audio/webm" });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          currentCard.mediaData = reader.result;
-          currentCard.mediaType = "audio";
-          document.getElementById("previewAudio").src = reader.result;
-        };
-        reader.readAsDataURL(blob);
-        osc.stop();
-        ctx.close();
-      };
-      recorder.start();
-      setTimeout(() => recorder.stop(), 400);
-    }
 
     function applyPreset(type) {
       if (type === "grad") {
@@ -366,8 +336,33 @@
       reader.readAsDataURL(file);
     }
 
+    function renderQRCode(urlText) {
+      const container = document.getElementById("qrContainer");
+      container.innerHTML = "";
+      try {
+        if (typeof QRCode === "function") {
+          new QRCode(container, {
+            text: urlText,
+            width: 184,
+            height: 184,
+            colorDark: "#1B3632",
+            colorLight: "#FFFFFF",
+            correctLevel: QRCode.CorrectLevel.L
+          });
+          return;
+        }
+      } catch (e) {}
+      const img = document.createElement("img");
+      img.width = 184;
+      img.height = 184;
+      img.alt = "QR Code";
+      img.src = "https://api.qrserver.com/v1/create-qr-code/?size=184x184&data=" + encodeURIComponent(urlText);
+      container.appendChild(img);
+    }
+
     function generateQR() {
-      const pin = (document.getElementById("pinInput").value || "1234").padEnd(4, "0").slice(0, 4);
+      const rawPin = (document.getElementById("pinInput").value || "1234").replace(/\D/g, "");
+      const pin = (rawPin || "1234").padEnd(4, "0").slice(0, 4);
       currentCard.theme = document.getElementById("themeSelect").value;
       currentCard.pin = pin;
       currentCard.sender = document.getElementById("senderInput").value.trim() || "Người gửi";
@@ -375,36 +370,30 @@
       currentCard.message = document.getElementById("messageInput").value.trim() || "Gửi bạn lời chúc tốt đẹp nhất!";
       currentCard.id = "VC-" + Math.floor(1000 + Math.random() * 9000);
 
-      try {
-        localStorage.setItem("voicecard_latest", JSON.stringify(currentCard));
-      } catch (e) {}
-
-      const baseUrl = window.location.href.split("#")[0].split("?")[0];
-      const payload = btoa(unescape(encodeURIComponent(JSON.stringify({
-        id: currentCard.id,
-        theme: currentCard.theme,
-        pin: currentCard.pin,
-        sender: currentCard.sender,
-        recipient: currentCard.recipient,
-        message: currentCard.message,
-        mediaType: currentCard.mediaType,
-        mediaData: currentCard.mediaData.length < 350000 ? currentCard.mediaData : ""
-      }))));
-      const targetUrl = `${baseUrl}?card=${encodeURIComponent(payload)}#open`;
-
-      const container = document.getElementById("qrContainer");
-      container.innerHTML = "";
-      new QRCode(container, {
-        text: targetUrl,
-        width: 184,
-        height: 184,
-        colorDark: "#1B3632",
-        colorLight: "#FFFFFF",
-        correctLevel: QRCode.CorrectLevel.M
-      });
-
       document.getElementById("pinDisplay").textContent = `Mã PIN mở khóa: ${currentCard.pin}`;
       document.getElementById("qrLinkText").textContent = `Mã thiệp: ${currentCard.id} — Dành cho ${currentCard.recipient}`;
+
+      const baseUrl = window.location.href.split("#")[0].split("?")[0];
+      const embedMedia = currentCard.mediaData && currentCard.mediaData.length < 12000 ? currentCard.mediaData : "";
+      let targetUrl = `${baseUrl}?id=${encodeURIComponent(currentCard.id)}&pin=${encodeURIComponent(currentCard.pin)}&theme=${encodeURIComponent(currentCard.theme)}&from=${encodeURIComponent(currentCard.sender)}&to=${encodeURIComponent(currentCard.recipient)}&msg=${encodeURIComponent(currentCard.message)}`;
+
+      if (!targetUrl.startsWith("http")) {
+        try {
+          const payload = btoa(unescape(encodeURIComponent(JSON.stringify({
+            id: currentCard.id,
+            theme: currentCard.theme,
+            pin: currentCard.pin,
+            sender: currentCard.sender,
+            recipient: currentCard.recipient,
+            message: currentCard.message,
+            mediaType: currentCard.mediaType,
+            mediaData: embedMedia
+          }))));
+          targetUrl = `https://nguyenkimngann0001-ship-it.github.io/voicecard/?card=${encodeURIComponent(payload)}`;
+        } catch (e) {}
+      }
+
+      renderQRCode(targetUrl);
       syncRecipientCard();
     }
 
@@ -415,10 +404,11 @@
       link.download = `${currentCard.id}-QR.png`;
       if (canvas) {
         link.href = canvas.toDataURL("image/png");
-      } else if (img) {
+        link.click();
+      } else if (img && img.src) {
         link.href = img.src;
+        link.click();
       }
-      link.click();
     }
 
     function syncRecipientCard() {
@@ -496,21 +486,27 @@
     window.addEventListener("DOMContentLoaded", () => {
       try {
         const params = new URLSearchParams(window.location.search);
-        const rawCard = params.get("card");
-        if (rawCard) {
-          const decoded = JSON.parse(decodeURIComponent(escape(atob(rawCard))));
+        if (params.get("to") || params.get("msg") || params.get("pin")) {
+          currentCard.id = params.get("id") || currentCard.id;
+          currentCard.pin = params.get("pin") || currentCard.pin;
+          currentCard.theme = params.get("theme") || currentCard.theme;
+          currentCard.sender = params.get("from") || currentCard.sender;
+          currentCard.recipient = params.get("to") || currentCard.recipient;
+          currentCard.message = params.get("msg") || currentCard.message;
+        } else if (params.get("card")) {
+          const decoded = JSON.parse(decodeURIComponent(escape(atob(params.get("card")))));
           currentCard = { ...currentCard, ...decoded };
-          document.getElementById("themeSelect").value = currentCard.theme;
-          document.getElementById("pinInput").value = currentCard.pin;
-          document.getElementById("senderInput").value = currentCard.sender;
-          document.getElementById("recipientInput").value = currentCard.recipient;
-          document.getElementById("messageInput").value = currentCard.message;
-          generateQR();
-          switchTab("recipient");
-          return;
         }
+        document.getElementById("themeSelect").value = currentCard.theme;
+        document.getElementById("pinInput").value = currentCard.pin;
+        document.getElementById("senderInput").value = currentCard.sender;
+        document.getElementById("recipientInput").value = currentCard.recipient;
+        document.getElementById("messageInput").value = currentCard.message;
       } catch (e) {}
       generateQR();
+      if (window.location.search.includes("to=") || window.location.search.includes("msg=") || window.location.search.includes("card=")) {
+        switchTab("recipient");
+      }
     });
   </script>
 </body>
