@@ -4,150 +4,660 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VoiceCard — Thiệp Giọng Nói Bảo Mật</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     :root {
-      --bg: #FAF7F2; --card: #FFFFFF; --ink: #172A27; --muted: #5E6D69;
-      --accent: #B8860B; --accent-soft: #F5EEDB; --forest: #1B3632;
-      --border: #E6DFD3; --danger: #B91C1C;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg); color: var(--ink); line-height: 1.5; padding: 20px; min-height: 100vh;
-    }
-    body.recipient-only {
-      background: radial-gradient(circle at top, #F5EEDB 0%, #FAF7F2 65%);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .container { max-width: 1040px; width: 100%; margin: 0 auto; }
-    header {
-      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-      gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
-    }
-    .brand { font-size: 24px; font-weight: 800; color: var(--forest); }
-    .brand span { color: var(--accent); }
-    .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
-    .tab-btn {
-      padding: 9px 16px; border-radius: 999px; border: 1px solid var(--border);
-      background: var(--card); color: var(--ink); font-weight: 600; cursor: pointer; font-size: 14px; transition: 0.2s;
-    }
-    .tab-btn.active { background: var(--forest); color: #fff; border-color: var(--forest); }
-    .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 24px; align-items: start; }
-    @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
-    .panel {
-      background: var(--card); border: 1px solid var(--border); border-radius: 18px;
-      padding: 22px; box-shadow: 0 6px 24px rgba(27,54,50,0.04);
-    }
-    h2 { font-size: 18px; margin-bottom: 14px; color: var(--forest); }
-    .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-    .chip {
-      padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
-      background: var(--accent-soft); color: var(--forest); border: 1px solid #E6D5A8; cursor: pointer; transition: 0.2s;
-    }
-    .chip:hover { background: #ebdcb6; }
-    .field { margin-bottom: 14px; }
-    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--forest); }
-    input, select, textarea {
-      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
-      font-size: 14px; font-family: inherit; background: #FFFDF9;
-    }
-    textarea { min-height: 76px; resize: vertical; }
-    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 520px) { .row-2 { grid-template-columns: 1fr; } }
-    .audio-box { background: #FAF7F2; border: 1px dashed #C8B99B; border-radius: 12px; padding: 12px; }
-    .audio-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
-    .btn {
-      padding: 10px 16px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer;
-      font-size: 14px; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;
-    }
-    .btn:active { transform: scale(0.98); }
-    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-    .btn-primary { background: var(--accent); color: #fff; width: 100%; justify-content: center; padding: 13px; font-size: 15px; }
-    .btn-forest { background: var(--forest); color: #fff; }
-    .btn-outline { background: #fff; color: var(--ink); border: 1px solid var(--border); }
-    .btn-danger { background: var(--danger); color: #fff; animation: pulseRec 1.2s infinite; }
-    @keyframes pulseRec { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-    audio, video { width: 100%; margin-top: 8px; border-radius: 10px; max-height: 220px; }
+      --bg: #F6F1E7;
+      --card: rgba(255, 253, 249, 0.95);
+      --ink: #132623;
+      --muted: #5A6B67;
+      --accent: #C9931E;
+      --accent-dark: #9B6B08;
+      --accent-soft: #F7EED7;
+      --forest: #14302B;
+      --forest-light: #224E46;
+      --border: rgba(201, 147, 30, 0.28);
+      --danger: #B91C1C;
 
-    .qr-card { text-align: center; }
+      /* Bảng màu động cho thiệp người nhận */
+      --rec-bg-1: #F3F6FA;
+      --rec-bg-2: #E2DAC9;
+      --rec-primary: #132A46;
+      --rec-secondary: #234975;
+      --rec-gold: #C9931E;
+      --rec-gold-bright: #FCE5A6;
+      --rec-card-grad: linear-gradient(155deg, rgba(255, 254, 250, 0.98) 0%, rgba(251, 242, 220, 0.96) 100%);
+      --rec-glow: rgba(201, 147, 30, 0.34);
+    }
+
+    body.theme-grad {
+      --rec-bg-1: #EEF3FA;
+      --rec-bg-2: #E2DAC9;
+      --rec-primary: #132A46;
+      --rec-secondary: #244C7A;
+      --rec-gold: #C9931E;
+      --rec-gold-bright: #FCE5A6;
+      --rec-card-grad: linear-gradient(160deg, #FFFFFF 0%, #F7F1E1 100%);
+      --rec-glow: rgba(201, 147, 30, 0.34);
+    }
+    body.theme-bday {
+      --rec-bg-1: #FFF0F3;
+      --rec-bg-2: #FADAE2;
+      --rec-primary: #6E1A38;
+      --rec-secondary: #A32854;
+      --rec-gold: #DC7A22;
+      --rec-gold-bright: #FFE0BA;
+      --rec-card-grad: linear-gradient(160deg, #FFFFFF 0%, #FFF0F4 100%);
+      --rec-glow: rgba(220, 122, 34, 0.3);
+    }
+    body.theme-love {
+      --rec-bg-1: #FDF0F3;
+      --rec-bg-2: #F6CFD9;
+      --rec-primary: #5D1228;
+      --rec-secondary: #8E1F3F;
+      --rec-gold: #C98528;
+      --rec-gold-bright: #FCE0AE;
+      --rec-card-grad: linear-gradient(160deg, #FFFDFD 0%, #FCE8EE 100%);
+      --rec-glow: rgba(201, 133, 40, 0.32);
+    }
+    body.theme-b2b {
+      --rec-bg-1: #EEF6F4;
+      --rec-bg-2: #D8EAE5;
+      --rec-primary: #10332D;
+      --rec-secondary: #1D574D;
+      --rec-gold: #BA871A;
+      --rec-gold-bright: #F7E2A8;
+      --rec-card-grad: linear-gradient(160deg, #FFFFFF 0%, #F3EEE0 100%);
+      --rec-glow: rgba(186, 135, 26, 0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background:
+        radial-gradient(circle at 10% 8%, rgba(201, 147, 30, 0.16), transparent 44%),
+        radial-gradient(circle at 90% 14%, rgba(20, 48, 43, 0.12), transparent 46%),
+        var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+      padding: 24px 18px 46px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body.recipient-only {
+      background:
+        radial-gradient(circle at 18% 12%, var(--rec-glow), transparent 46%),
+        radial-gradient(circle at 82% 88%, rgba(19, 42, 70, 0.16), transparent 48%),
+        linear-gradient(155deg, var(--rec-bg-1) 0%, var(--rec-bg-2) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    /* Hạt kim tuyến & cánh hoa ánh kim bay lơ lửng */
+    .floating-petals {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .floating-petals span {
+      position: absolute;
+      bottom: -36px;
+      border-radius: 65% 0 65% 65%;
+      background: linear-gradient(135deg, var(--rec-gold), var(--rec-gold-bright));
+      box-shadow: 0 0 12px var(--rec-glow);
+      opacity: 0;
+      animation: floatSparkle 11s ease-in infinite;
+    }
+    .floating-petals span:nth-child(1) { left: 8%; width: 13px; height: 13px; animation-duration: 9.5s; animation-delay: 0s; }
+    .floating-petals span:nth-child(2) { left: 20%; width: 8px; height: 8px; border-radius: 50%; animation-duration: 12s; animation-delay: 1.8s; }
+    .floating-petals span:nth-child(3) { left: 36%; width: 14px; height: 14px; animation-duration: 10.5s; animation-delay: 3.4s; }
+    .floating-petals span:nth-child(4) { left: 54%; width: 9px; height: 9px; border-radius: 50%; animation-duration: 13s; animation-delay: 1.1s; }
+    .floating-petals span:nth-child(5) { left: 71%; width: 13px; height: 13px; animation-duration: 10s; animation-delay: 2.7s; }
+    .floating-petals span:nth-child(6) { left: 85%; width: 10px; height: 10px; border-radius: 50%; animation-duration: 11.5s; animation-delay: 4.5s; }
+    .floating-petals span:nth-child(7) { left: 94%; width: 12px; height: 12px; animation-duration: 12.5s; animation-delay: 0.7s; }
+
+    @keyframes floatSparkle {
+      0% { transform: translateY(0) translateX(0) rotate(0deg) scale(0.7); opacity: 0; }
+      18% { opacity: 0.65; }
+      50% { transform: translateY(-54vh) translateX(16px) rotate(180deg) scale(1.05); opacity: 0.55; }
+      85% { opacity: 0.35; }
+      100% { transform: translateY(-110vh) translateX(-12px) rotate(360deg) scale(0.85); opacity: 0; }
+    }
+
+    .container { max-width: 1080px; width: 100%; margin: 0 auto; position: relative; z-index: 1; }
+
+    /* Header */
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 22px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      margin-bottom: 26px;
+      box-shadow: 0 10px 28px rgba(19, 38, 35, 0.05);
+    }
+
+    .brand-wrap { display: flex; align-items: center; gap: 11px; }
+    .brand-mark {
+      width: 40px; height: 40px; border-radius: 13px;
+      background: linear-gradient(135deg, var(--forest), var(--forest-light));
+      color: #FCE5A6; display: grid; place-items: center;
+      font-family: "Cormorant Garamond", serif; font-weight: 700; font-size: 23px;
+      box-shadow: 0 8px 18px rgba(20, 48, 43, 0.24), inset 0 1px 1px rgba(255,255,255,0.35);
+    }
+    .brand {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 28px; font-weight: 700; color: var(--forest); letter-spacing: -0.3px;
+    }
+    .brand span { color: var(--accent); font-style: italic; }
+
+    .tabs {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      background: #EFE8D8; padding: 4px; border-radius: 999px;
+    }
+    .tab-btn {
+      padding: 8px 16px; border-radius: 999px; border: none;
+      background: transparent; color: var(--muted); font-weight: 600;
+      cursor: pointer; font-size: 13.5px; transition: all 0.25s ease;
+    }
+    .tab-btn:hover { color: var(--forest); }
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--forest), var(--forest-light));
+      color: #fff;
+      box-shadow: 0 5px 14px rgba(20, 48, 43, 0.22);
+    }
+
+    /* Sender Layout */
+    .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 24px; align-items: start; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      padding: 26px;
+      box-shadow: 0 16px 42px rgba(19, 38, 35, 0.06);
+    }
+
+    .panel-title {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 25px; font-weight: 700; color: var(--forest); margin-bottom: 4px;
+    }
+    .panel-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+
+    .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    .chip {
+      padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+      background: var(--accent-soft); color: var(--forest);
+      border: 1px solid rgba(201, 147, 30, 0.38); cursor: pointer; transition: all 0.22s ease;
+    }
+    .chip:hover {
+      background: #EEDBB0; transform: translateY(-1.5px);
+      box-shadow: 0 6px 14px rgba(201, 147, 30, 0.16);
+    }
+
+    .field { margin-bottom: 15px; }
+    label {
+      display: block; font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 6px; color: var(--forest);
+    }
+    input, select, textarea {
+      width: 100%; padding: 11px 14px; border-radius: 13px;
+      border: 1px solid #DDD3C0; font-size: 14px; font-family: inherit;
+      background: #FFFFFF; color: var(--ink); transition: all 0.2s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(201, 147, 30, 0.16);
+    }
+    textarea { min-height: 82px; resize: vertical; }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 540px) { .row-2 { grid-template-columns: 1fr; } }
+
+    .audio-box {
+      background: linear-gradient(180deg, #FCF9F1 0%, #F5EDE0 100%);
+      border: 1.5px dashed rgba(201, 147, 30, 0.48);
+      border-radius: 16px; padding: 14px;
+    }
+    .audio-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+
+    .btn {
+      padding: 10px 16px; border-radius: 13px; border: none; font-weight: 700;
+      cursor: pointer; font-size: 13.5px; display: inline-flex; align-items: center;
+      justify-content: center; gap: 7px; transition: all 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative; overflow: hidden;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #E2B03B 0%, var(--rec-gold) 52%, #9C6908 100%);
+      color: #FFFDF8; width: 100%; padding: 14px 20px; font-size: 15px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+      box-shadow: 0 12px 26px var(--rec-glow), inset 0 1px 1px rgba(255,255,255,0.45);
+    }
+    .btn-primary::after {
+      content: ""; position: absolute; top: 0; left: -130%;
+      width: 55%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.48), transparent);
+      transform: skewX(-24deg);
+      animation: btnShine 3.4s infinite;
+    }
+    @keyframes btnShine {
+      0%, 62% { left: -130%; }
+      100% { left: 170%; }
+    }
+
+    .btn-forest {
+      background: linear-gradient(135deg, var(--rec-primary), var(--rec-secondary));
+      color: #FFFDF8;
+      box-shadow: 0 8px 20px rgba(19, 42, 70, 0.22), inset 0 1px 1px rgba(255,255,255,0.22);
+    }
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.9); color: var(--ink);
+      border: 1px solid rgba(201, 147, 30, 0.32);
+    }
+    .btn-outline:hover:not(:disabled) {
+      border-color: var(--rec-gold); background: #FFFDF9;
+      box-shadow: 0 6px 16px rgba(201, 147, 30, 0.14);
+    }
+    .btn-danger { background: var(--danger); color: #fff; animation: pulseRec 1.2s infinite; }
+    @keyframes pulseRec { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
+
+    audio, video { width: 100%; margin-top: 10px; border-radius: 13px; max-height: 220px; }
+
+    /* QR Card */
+    .qr-card {
+      text-align: center;
+      background: linear-gradient(180deg, rgba(255, 253, 249, 0.98) 0%, rgba(248, 239, 218, 0.96) 100%);
+    }
     .qr-box {
-      display: inline-flex; justify-content: center; align-items: center; padding: 16px;
-      background: #fff; border: 2px solid var(--accent-soft); border-radius: 16px;
-      margin: 12px auto; width: 232px; height: 232px; transition: transform 0.3s ease, border-color 0.3s ease;
+      display: inline-flex; justify-content: center; align-items: center;
+      padding: 16px; background: #fff;
+      border: 2px solid rgba(201, 147, 30, 0.34);
+      border-radius: 24px; margin: 14px auto;
+      width: 238px; height: 238px;
+      box-shadow: 0 14px 32px rgba(19, 38, 35, 0.08), 0 0 0 5px rgba(255,255,255,0.65);
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease;
     }
-    .qr-box.updated { transform: scale(1.04); border-color: var(--accent); box-shadow: 0 0 20px rgba(184,134,11,0.25); }
-    .qr-box img, .qr-box canvas { display: block; width: 200px !important; height: 200px !important; }
+    .qr-box.updated {
+      transform: scale(1.05);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 7px rgba(201, 147, 30, 0.2), 0 18px 34px rgba(201, 147, 30, 0.25);
+    }
+    .qr-box img, .qr-box canvas { display: block; width: 204px !important; height: 204px !important; border-radius: 8px; }
+
     .pin-badge {
-      display: inline-block; background: var(--accent-soft); color: var(--forest);
-      padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-bottom: 10px;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent-soft); color: var(--forest);
+      border: 1px solid rgba(201, 147, 30, 0.38);
+      padding: 5px 15px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-bottom: 6px;
     }
-    .qr-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+    .qr-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
     .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; word-break: break-word; }
     .status-msg { font-size: 13px; color: var(--forest); font-weight: 600; margin-top: 6px; word-break: break-word; }
 
+    /* ================================================================
+       GIAO DIỆN THIỆP BÊN NGƯỜI NHẬN — ROYAL GOLD & VELVET LUXURY
+       ================================================================ */
     .vault-wrap {
-      max-width: 520px; margin: 0 auto; text-align: center; position: relative; overflow: hidden;
-      border: 1.5px solid #E6D5A8; box-shadow: 0 14px 36px rgba(27, 54, 50, 0.08);
+      max-width: 496px;
+      width: 100%;
+      margin: 0 auto;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      padding: 40px 28px 32px;
+      border-radius: 30px;
+      background: var(--rec-card-grad);
+      border: 1.5px solid rgba(201, 147, 30, 0.52);
+      box-shadow:
+        0 28px 70px rgba(19, 38, 35, 0.16),
+        0 0 42px var(--rec-glow),
+        0 0 0 7px rgba(255, 255, 255, 0.6);
+      animation: envelopeAppear 0.75s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .pin-inputs { display: flex; justify-content: center; gap: 10px; margin: 18px 0; }
-    .pin-inputs input {
-      width: 52px; height: 58px; text-align: center; font-size: 24px; font-weight: 800;
-      border-radius: 12px; border: 2px solid var(--border); transition: 0.2s;
-    }
-    .pin-inputs input:focus { outline: none; border-color: var(--accent); transform: translateY(-2px); }
-    .error-text { color: var(--danger); font-size: 13.5px; font-weight: 600; min-height: 20px; margin-bottom: 8px; }
 
-    .unlocked-card {
-      text-align: left;
-      background: linear-gradient(155deg, #FFFDF9 0%, #F8EED8 100%);
-      border: 1.5px solid #DEC996; border-radius: 18px; padding: 24px; margin-top: 16px;
-      box-shadow: 0 12px 30px rgba(184, 134, 11, 0.14);
-      animation: cardPopIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-    @keyframes cardPopIn {
+    @keyframes envelopeAppear {
       0% { opacity: 0; transform: translateY(22px) scale(0.95); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .tag {
-      display: inline-block; background: var(--forest); color: #fff; font-size: 11.5px;
-      font-weight: 700; padding: 4px 12px; border-radius: 999px; margin-bottom: 10px; letter-spacing: 0.5px;
+
+    /* Viền nhũ vàng kép trang trí góc thiệp */
+    .vault-wrap::before {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border: 1px solid rgba(201, 147, 30, 0.34);
+      border-radius: 22px;
+      pointer-events: none;
+      box-shadow: inset 0 0 24px rgba(201, 147, 30, 0.08);
     }
 
+    /* Ánh hào quang rực rỡ trên đỉnh thiệp */
+    .card-ribbon {
+      position: absolute;
+      top: -65px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 320px;
+      height: 140px;
+      background: radial-gradient(circle, var(--rec-glow) 0%, transparent 72%);
+      pointer-events: none;
+      animation: haloPulse 4s ease-in-out infinite alternate;
+    }
+    @keyframes haloPulse {
+      0% { opacity: 0.7; transform: translateX(-50%) scale(0.96); }
+      100% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+    }
+
+    /* Vòng hào quang xoay nhẹ sau con dấu sáp */
+    .seal-stage {
+      position: relative;
+      width: 84px;
+      height: 84px;
+      margin: 0 auto 14px;
+      display: grid;
+      place-items: center;
+    }
+    .seal-halo {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px dashed rgba(201, 147, 30, 0.55);
+      animation: slowHaloSpin 14s linear infinite;
+    }
+    @keyframes slowHaloSpin {
+      100% { transform: rotate(360deg); }
+    }
+
+    .wax-seal {
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 26%, #FCE5A6 0%, #D49B22 45%, #8A5706 100%);
+      color: #FFFDF7;
+      display: grid;
+      place-items: center;
+      font-size: 26px;
+      box-shadow:
+        0 10px 24px rgba(156, 105, 8, 0.42),
+        inset 0 2px 5px rgba(255, 255, 255, 0.65),
+        inset 0 -3px 7px rgba(78, 47, 2, 0.5);
+      border: 2px solid rgba(255, 248, 224, 0.8);
+      position: relative;
+      z-index: 1;
+      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+    }
+    .wax-seal.opened {
+      transform: scale(0.92) rotate(18deg);
+      box-shadow: 0 0 26px var(--rec-glow), inset 0 2px 5px rgba(255, 255, 255, 0.7);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, var(--rec-primary), var(--rec-secondary));
+      color: var(--rec-gold-bright);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 16px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      box-shadow: 0 6px 16px rgba(19, 42, 70, 0.2), inset 0 1px 1px rgba(255,255,255,0.2);
+    }
+
+    .recipient-kicker {
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 2.2px;
+      color: var(--rec-gold);
+      font-weight: 800;
+      margin-top: 2px;
+    }
+
+    .recipient-title {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 35px;
+      font-weight: 700;
+      color: var(--rec-primary);
+      line-height: 1.15;
+      margin: 4px 0 6px;
+      text-shadow: 0 2px 10px rgba(201, 147, 30, 0.14);
+    }
+
+    .gold-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px auto 14px;
+      width: 200px;
+      color: var(--rec-gold);
+      font-size: 13px;
+    }
+    .gold-divider::before, .gold-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--rec-gold), transparent);
+    }
+
+    .pin-inputs { display: flex; justify-content: center; gap: 11px; margin: 18px 0 14px; }
+    .pin-inputs input {
+      width: 55px; height: 64px; text-align: center;
+      font-size: 26px; font-weight: 800; border-radius: 16px;
+      border: 2px solid rgba(201, 147, 30, 0.36);
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--rec-primary);
+      box-shadow: 0 8px 18px rgba(19, 38, 35, 0.05);
+      transition: all 0.22s ease;
+    }
+    .pin-inputs input:focus {
+      outline: none;
+      border-color: var(--rec-gold);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px var(--rec-glow);
+    }
+
+    .shake { animation: shakeErr 0.36s ease; }
+    @keyframes shakeErr {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-7px); }
+      75% { transform: translateX(7px); }
+    }
+
+    .error-text { color: var(--danger); font-size: 13.5px; font-weight: 600; min-height: 20px; margin-bottom: 10px; }
+
+    /* Thiệp mở ra lộng lẫy */
+    .unlocked-card {
+      text-align: left;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 251, 241, 0.9) 100%);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(201, 147, 30, 0.45);
+      border-radius: 24px;
+      padding: 24px 21px;
+      margin-top: 12px;
+      box-shadow:
+        0 18px 42px rgba(19, 42, 70, 0.1),
+        0 0 28px rgba(201, 147, 30, 0.14);
+      animation: letterUnfold 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes letterUnfold {
+      0% { opacity: 0; transform: translateY(28px) scale(0.92) rotateX(8deg); }
+      100% { opacity: 1; transform: translateY(0) scale(1) rotateX(0deg); }
+    }
+
+    .sender-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, var(--rec-bg-1), #FFFFFF);
+      border: 1px solid rgba(201, 147, 30, 0.35);
+      color: var(--rec-primary);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 13px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+      box-shadow: 0 3px 10px rgba(201, 147, 30, 0.08);
+    }
+
+    .quote-msg {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 21px;
+      font-style: italic;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.62;
+      margin-bottom: 18px;
+      padding: 12px 16px;
+      background: linear-gradient(90deg, rgba(201, 147, 30, 0.12), rgba(201, 147, 30, 0.02));
+      border-left: 3.5px solid var(--rec-gold);
+      border-radius: 0 14px 14px 0;
+    }
+
+    /* Trình phát đĩa than + sóng âm phát sáng */
     .wave-wrap {
-      background: rgba(255, 255, 255, 0.75); border: 1px solid #E6D5A8;
-      border-radius: 14px; padding: 12px; margin: 12px 0;
+      background: linear-gradient(135deg, var(--rec-primary) 0%, var(--rec-secondary) 100%);
+      color: #FFFDF8;
+      border-radius: 20px;
+      padding: 16px;
+      margin: 12px 0;
+      box-shadow: 0 14px 30px rgba(19, 42, 70, 0.24), inset 0 1px 1px rgba(255,255,255,0.22);
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow 0.35s ease;
     }
-    .wave-label {
-      font-size: 12px; font-weight: 700; color: var(--forest);
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+    .wave-wrap.active-glow {
+      box-shadow: 0 14px 34px rgba(19, 42, 70, 0.28), 0 0 26px var(--rec-glow);
     }
-    .sound-wave { display: flex; align-items: center; justify-content: center; gap: 5px; height: 30px; }
+
+    .player-header {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      margin-bottom: 12px;
+    }
+
+    .vinyl-disc {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background:
+        radial-gradient(circle, var(--rec-gold-bright) 0 17%, var(--rec-gold) 18% 27%, #141B1A 28% 46%, #222C2A 47% 49%, #141B1A 50% 68%, #222C2A 69% 71%, #141B1A 72% 100%);
+      border: 2px solid rgba(252, 229, 166, 0.55);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+    .vinyl-disc.spinning {
+      animation: spinVinyl 3.2s linear infinite;
+      box-shadow: 0 0 18px var(--rec-glow), 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+    @keyframes spinVinyl {
+      100% { transform: rotate(360deg); }
+    }
+
+    .track-meta { flex: 1; min-width: 0; }
+    .track-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #FFFDF8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .track-status {
+      font-size: 11.5px;
+      color: var(--rec-gold-bright);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .sound-wave {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      height: 34px;
+      background: rgba(255, 255, 255, 0.09);
+      border-radius: 13px;
+      padding: 5px 12px;
+    }
     .sound-wave span {
-      display: block; width: 5px; height: 7px; background: var(--accent); border-radius: 999px; transition: height 0.2s ease;
+      display: block;
+      width: 4.5px;
+      height: 6px;
+      background: var(--rec-gold-bright);
+      border-radius: 999px;
+      transition: height 0.2s ease;
     }
-    .sound-wave.playing span { animation: waveBounce 0.75s ease-in-out infinite alternate; }
-    .sound-wave.playing span:nth-child(2) { animation-delay: 0.1s; }
-    .sound-wave.playing span:nth-child(3) { animation-delay: 0.22s; }
-    .sound-wave.playing span:nth-child(4) { animation-delay: 0.35s; }
-    .sound-wave.playing span:nth-child(5) { animation-delay: 0.18s; }
-    .sound-wave.playing span:nth-child(6) { animation-delay: 0.3s; }
+    .sound-wave.playing span { animation: waveBounce 0.65s ease-in-out infinite alternate; }
+    .sound-wave.playing span:nth-child(2) { animation-delay: 0.09s; }
+    .sound-wave.playing span:nth-child(3) { animation-delay: 0.2s; }
+    .sound-wave.playing span:nth-child(4) { animation-delay: 0.32s; }
+    .sound-wave.playing span:nth-child(5) { animation-delay: 0.16s; }
+    .sound-wave.playing span:nth-child(6) { animation-delay: 0.28s; }
     .sound-wave.playing span:nth-child(7) { animation-delay: 0.12s; }
-    .sound-wave.playing span:nth-child(8) { animation-delay: 0.25s; }
+    .sound-wave.playing span:nth-child(8) { animation-delay: 0.24s; }
+    .sound-wave.playing span:nth-child(9) { animation-delay: 0.14s; }
+    .sound-wave.playing span:nth-child(10) { animation-delay: 0.26s; }
+    .sound-wave.playing span:nth-child(11) { animation-delay: 0.18s; }
+    .sound-wave.playing span:nth-child(12) { animation-delay: 0.08s; }
     @keyframes waveBounce {
-      0% { height: 7px; background: var(--accent); }
-      100% { height: 28px; background: var(--forest); }
+      0% { height: 6px; background: var(--rec-gold-bright); box-shadow: 0 0 4px var(--rec-gold-bright); }
+      100% { height: 26px; background: #FFFFFF; box-shadow: 0 0 10px #FFFFFF; }
     }
+
+    .card-footer-actions {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .card-footer-actions .btn-forest { flex: 1; }
 
     .hidden { display: none !important; }
-    @media print { header, .panel:first-child, .qr-actions, .hint, .tabs { display: none !important; } body { background: #fff; } .panel { box-shadow: none; border: 1px solid #ccc; } }
+    @media print {
+      header, .panel:first-child, .qr-actions, .hint, .tabs, .floating-petals { display: none !important; }
+      body { background: #fff; }
+      .panel { box-shadow: none; border: 1px solid #ccc; }
+    }
   </style>
 </head>
-<body>
+<body class="theme-grad">
+  <div class="floating-petals" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+
   <div class="container">
     <header id="mainHeader">
-      <div class="brand">Voice<span>Card</span></div>
+      <div class="brand-wrap">
+        <div class="brand-mark">V</div>
+        <div class="brand">Voice<span>Card</span></div>
+      </div>
       <div class="tabs" id="navTabs">
         <button class="tab-btn active" id="tabSender" onclick="switchTab('sender')">1. Tạo Thiệp & Lấy QR</button>
         <button class="tab-btn" id="tabRecipient" onclick="switchTab('recipient')">2. Xem thử giao diện Nhận Thiệp</button>
@@ -156,11 +666,14 @@
 
     <section id="senderView" class="grid">
       <div class="panel">
-        <h2>Thiết kế lời nhắn cho thiệp</h2>
+        <h2 class="panel-title">Thiết kế lời nhắn cho thiệp</h2>
+        <p class="panel-sub">Mỗi chủ đề sẽ tự động khoác lên thiệp người nhận một bảng màu & hiệu ứng riêng.</p>
+
         <div class="presets">
-          <button type="button" class="chip" onclick="applyPreset('grad')">Mẫu Tốt nghiệp</button>
-          <button type="button" class="chip" onclick="applyPreset('bday')">Mẫu Sinh nhật</button>
-          <button type="button" class="chip" onclick="applyPreset('b2b')">Mẫu Tri ân khách hàng</button>
+          <button type="button" class="chip" onclick="applyPreset('grad')">🎓 Mẫu Tốt nghiệp</button>
+          <button type="button" class="chip" onclick="applyPreset('bday')">🎂 Mẫu Sinh nhật</button>
+          <button type="button" class="chip" onclick="applyPreset('love')">💐 Mẫu Kỷ niệm</button>
+          <button type="button" class="chip" onclick="applyPreset('b2b')">✨ Mẫu Tri ân</button>
         </div>
 
         <div class="row-2">
@@ -212,52 +725,68 @@
           </div>
         </div>
 
-        <button type="button" class="btn btn-primary" id="genBtn" onclick="generateQR(true)">Cập nhật Thiệp & Sinh Mã QR</button>
+        <button type="button" class="btn btn-primary" id="genBtn" onclick="generateQR(true)">✨ Cập nhật Thiệp & Sinh Mã QR</button>
       </div>
 
       <div class="panel qr-card">
-        <h2>Mã QR của thiệp</h2>
-        <div class="pin-badge" id="pinDisplay">Mã PIN mở khóa: 1234</div>
+        <h2 class="panel-title">Mã QR của thiệp</h2>
+        <p class="panel-sub">Quét mã bằng camera điện thoại và nhập PIN để mở thiệp.</p>
+
+        <div class="pin-badge" id="pinDisplay">🔐 Mã PIN mở khóa: 1234</div>
         <div class="qr-box" id="qrContainer"></div>
-        <div id="qrUpdateStatus" class="status-msg" style="color: var(--accent);"></div>
+        <div id="qrUpdateStatus" class="status-msg" style="color: var(--accent-dark);"></div>
         <div id="qrLinkText" class="hint"></div>
 
         <div class="qr-actions">
-          <button type="button" class="btn btn-forest" onclick="downloadQR()">Tải ảnh QR (PNG)</button>
-          <button type="button" class="btn btn-outline" onclick="window.print()">In mẫu thiệp</button>
-          <button type="button" class="btn btn-outline" onclick="openRecipientDemo()">Quét thử QR ngay</button>
+          <button type="button" class="btn btn-forest" onclick="downloadQR()">⬇️ Tải ảnh QR (PNG)</button>
+          <button type="button" class="btn btn-outline" onclick="window.print()">🖨️ In mẫu thiệp</button>
+          <button type="button" class="btn btn-outline" onclick="openRecipientDemo()">👁️ Xem thiệp người nhận</button>
         </div>
       </div>
     </section>
 
     <section id="recipientView" class="hidden">
       <div class="panel vault-wrap">
-        <span class="tag" id="recThemeTag">THIỆP GIỌNG NÓI</span>
-        <h2 id="recGreeting" style="font-size: 22px;">Thiệp dành cho bạn</h2>
-        <p class="hint" id="recHintDemo">Nhập mã PIN 4 số để mở khóa lời nhắn riêng tư.</p>
+        <div class="card-ribbon"></div>
+
+        <div class="seal-stage">
+          <div class="seal-halo"></div>
+          <div class="wax-seal" id="waxSeal">🎓</div>
+        </div>
+
+        <div><span class="tag" id="recThemeTag">✦ TỐT NGHIỆP ✦</span></div>
+
+        <div class="recipient-kicker">Trân trọng gửi tới</div>
+        <h2 class="recipient-title" id="recGreeting">Lan Phương</h2>
+        <div class="gold-divider">✦</div>
 
         <div id="pinLockBox">
-          <div class="pin-inputs">
+          <p class="hint" id="recHintDemo" style="margin-top: 0;">Nhập mật mã 4 số để mở khóa thiệp &amp; lời nhắn riêng tư.</p>
+          <div class="pin-inputs" id="pinInputsRow">
             <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" oninput="movePin(this, 0)" />
             <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" oninput="movePin(this, 1)" />
             <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" oninput="movePin(this, 2)" />
             <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" oninput="movePin(this, 3)" />
           </div>
           <div class="error-text" id="pinError"></div>
-          <button type="button" class="btn btn-primary" onclick="unlockCard()">🔓 Mở khóa lời nhắn</button>
+          <button type="button" class="btn btn-primary" onclick="unlockCard()">🔓 Mở thiệp &amp; Nghe lời nhắn</button>
         </div>
 
         <div id="unlockedBox" class="unlocked-card hidden">
-          <div style="font-size:13px; color:var(--muted); margin-bottom:8px; font-weight:600;" id="cardMeta"></div>
-          <p id="cardText" style="font-size:16px; margin-bottom:14px; line-height:1.6; color: var(--ink);"></p>
+          <div class="sender-pill" id="cardMeta">✍️ Gửi từ Minh Anh</div>
+          <p class="quote-msg" id="cardText"></p>
 
           <div class="wave-wrap" id="waveBox">
-            <div class="wave-label">
-              <span id="waveTitle">🎧 Lời nhắn âm thanh</span>
-              <span id="waveBadge" style="color: var(--accent);">Sẵn sàng phát</span>
+            <div class="player-header">
+              <div class="vinyl-disc" id="vinylDisc"></div>
+              <div class="track-meta">
+                <div class="track-title" id="waveTitle">Lời nhắn giọng nói riêng</div>
+                <div class="track-status" id="waveBadge">Sẵn sàng phát</div>
+              </div>
             </div>
             <div class="sound-wave" id="soundWave">
-              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span>
             </div>
           </div>
 
@@ -265,11 +794,11 @@
           <video id="recVideo" controls preload="metadata" playsinline class="hidden"></video>
           <div id="mediaNote" class="hint"></div>
 
-          <div style="margin-top:18px; display:flex; gap:8px; flex-wrap:wrap;">
+          <div class="card-footer-actions">
             <button type="button" class="btn btn-forest" onclick="sendReaction()">💖 Gửi lời cảm ơn</button>
-            <button type="button" class="btn btn-outline" onclick="lockCardAgain()">🔒 Khóa lại</button>
+            <button type="button" class="btn btn-outline" onclick="lockCardAgain()">🔒 Niêm phong lại</button>
           </div>
-          <div id="reactionMsg" class="status-msg" style="margin-top: 10px;"></div>
+          <div id="reactionMsg" class="status-msg" style="margin-top: 10px; text-align: center;"></div>
         </div>
       </div>
     </section>
@@ -296,12 +825,29 @@
     let chunks = [];
     let isScannedRecipientMode = false;
 
-    // Rút gọn link Cloudinary để mã QR ngắn, thoáng và cực kỳ dễ quét
+    function applyThemeStyle(themeText) {
+      document.body.classList.remove("theme-grad", "theme-bday", "theme-love", "theme-b2b");
+      const seal = document.getElementById("waxSeal");
+      if (themeText.includes("Sinh nhật")) {
+        document.body.classList.add("theme-bday");
+        if (seal) seal.textContent = "🎂";
+      } else if (themeText.includes("Kỷ niệm") || themeText.includes("Yêu")) {
+        document.body.classList.add("theme-love");
+        if (seal) seal.textContent = "💝";
+      } else if (themeText.includes("Tri ân")) {
+        document.body.classList.add("theme-b2b");
+        if (seal) seal.textContent = "✨";
+      } else {
+        document.body.classList.add("theme-grad");
+        if (seal) seal.textContent = "🎓";
+      }
+    }
+
     function packCloudinaryPath(fullUrl) {
       if (!fullUrl) return "";
       const prefix = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/`;
       if (fullUrl.startsWith(prefix)) {
-        return fullUrl.slice(prefix.length); // vd: video/upload/v123456/abc.mp3
+        return fullUrl.slice(prefix.length);
       }
       return fullUrl;
     }
@@ -330,6 +876,12 @@
         document.getElementById("recipientInput").value = "Thảo Vy";
         document.getElementById("messageInput").value = "Sinh nhật vui vẻ nhé! Mong tuổi mới của cậu tràn ngập tiếng cười, sức khỏe và thật nhiều niềm vui.";
         document.getElementById("pinInput").value = "1908";
+      } else if (type === "love") {
+        document.getElementById("themeSelect").value = "Kỷ niệm & Yêu thương";
+        document.getElementById("senderInput").value = "Anh";
+        document.getElementById("recipientInput").value = "Em yêu";
+        document.getElementById("messageInput").value = "Cảm ơn em đã luôn ở bên và làm mỗi ngày của anh trở nên thật đặc biệt. Bấm nghe lời nhắn của anh nhé!";
+        document.getElementById("pinInput").value = "1402";
       } else {
         document.getElementById("themeSelect").value = "Tri ân đối tác / Khách hàng";
         document.getElementById("senderInput").value = "Đội ngũ VoiceCard";
@@ -440,10 +992,10 @@
     function drawFallbackQR(container, urlText) {
       container.innerHTML = "";
       const img = document.createElement("img");
-      img.width = 200;
-      img.height = 200;
+      img.width = 204;
+      img.height = 204;
       img.alt = "QR Code";
-      img.src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=" + encodeURIComponent(urlText);
+      img.src = "https://api.qrserver.com/v1/create-qr-code/?size=204x204&margin=4&data=" + encodeURIComponent(urlText);
       container.appendChild(img);
     }
 
@@ -454,9 +1006,9 @@
         if (typeof QRCode === "function") {
           new QRCode(container, {
             text: urlText,
-            width: 200,
-            height: 200,
-            colorDark: "#1B3632",
+            width: 204,
+            height: 204,
+            colorDark: "#14302B",
             colorLight: "#FFFFFF",
             correctLevel: QRCode.CorrectLevel.L
           });
@@ -480,14 +1032,14 @@
       currentCard.recipient = document.getElementById("recipientInput").value.trim() || "Người nhận";
       currentCard.message = (document.getElementById("messageInput").value.trim() || "Gửi bạn lời chúc tốt đẹp nhất!").slice(0, 120);
 
-      document.getElementById("pinDisplay").textContent = `Mã PIN mở khóa: ${currentCard.pin}`;
+      applyThemeStyle(currentCard.theme);
+      document.getElementById("pinDisplay").textContent = `🔐 Mã PIN mở khóa: ${currentCard.pin}`;
       updateFileInfoOnly();
 
       const baseUrl = window.location.href.startsWith("http")
         ? window.location.href.split("#")[0].split("?")[0]
         : "https://nguyenkimngann0001-ship-it.github.io/voicecard/";
 
-      // Sử dụng tham số rút gọn (p, th, f, t, m, mt, a) để QR cực kỳ thoáng & quét nhạy
       const params = new URLSearchParams();
       params.set("p", currentCard.pin);
       params.set("th", currentCard.theme);
@@ -508,7 +1060,7 @@
         const statusEl = document.getElementById("qrUpdateStatus");
         box.classList.add("updated");
         statusEl.textContent = currentCard.mediaRemoteUrl
-          ? "✨ QR đã sẵn sàng (đã rút gọn link để quét nhanh)!"
+          ? "✨ QR đã sẵn sàng kèm âm thanh!"
           : "✨ Mã QR đã được cập nhật!";
         setTimeout(() => box.classList.remove("updated"), 800);
       }
@@ -529,10 +1081,11 @@
     }
 
     function syncRecipientCard() {
-      document.getElementById("recThemeTag").textContent = currentCard.theme.toUpperCase();
-      document.getElementById("recGreeting").textContent = `Gửi tới ${currentCard.recipient}`;
-      document.getElementById("recHintDemo").textContent = `Nhập mã PIN 4 số để mở khóa lời nhắn riêng tư.`;
-      document.getElementById("cardMeta").textContent = `Từ: ${currentCard.sender} • Mã thiệp: ${currentCard.id}`;
+      applyThemeStyle(currentCard.theme);
+      document.getElementById("recThemeTag").textContent = `✦ ${currentCard.theme.toUpperCase()} ✦`;
+      document.getElementById("recGreeting").textContent = currentCard.recipient;
+      document.getElementById("recHintDemo").textContent = `Nhập mật mã 4 số để mở khóa thiệp & lời nhắn riêng tư.`;
+      document.getElementById("cardMeta").textContent = `✍️ Gửi từ ${currentCard.sender} • ${currentCard.id}`;
       document.getElementById("cardText").textContent = currentCard.message;
 
       const aud = document.getElementById("recAudio");
@@ -556,14 +1109,14 @@
         aud.classList.remove("hidden");
         vid.classList.add("hidden");
         waveBox.classList.remove("hidden");
-        waveTitle.textContent = `🎧 ${currentCard.mediaName || "Lời nhắn giọng nói"}`;
+        waveTitle.textContent = currentCard.mediaName || "Lời nhắn giọng nói riêng";
         badge.textContent = "Sẵn sàng phát";
-        note.textContent = "Bấm nút ▶ trên thanh phát để nghe lời nhắn.";
+        note.textContent = "Bấm nút ▶ trên thanh phát để lắng nghe lời nhắn.";
       } else {
         aud.classList.add("hidden");
         vid.classList.add("hidden");
         waveBox.classList.add("hidden");
-        note.textContent = "Thiệp này không đính kèm tệp âm thanh.";
+        note.textContent = "Thiệp này chỉ gồm lời nhắn văn bản.";
       }
     }
 
@@ -595,10 +1148,10 @@
     function triggerConfettiEffect() {
       if (typeof confetti === "function") {
         confetti({
-          particleCount: 95,
-          spread: 75,
-          origin: { y: 0.6 },
-          colors: ['#B8860B', '#1B3632', '#E6D5A8', '#D97706']
+          particleCount: 135,
+          spread: 92,
+          origin: { y: 0.56 },
+          colors: ['#FCE5A6', '#C9931E', '#132A46', '#E11D48', '#F59E0B']
         });
       }
     }
@@ -606,8 +1159,12 @@
     function unlockCard() {
       const entered = Array.from(document.querySelectorAll(".pin-digit")).map(d => d.value).join("");
       const errEl = document.getElementById("pinError");
+      const pinRow = document.getElementById("pinInputsRow");
+      const seal = document.getElementById("waxSeal");
+
       if (entered === currentCard.pin) {
         errEl.textContent = "";
+        seal.classList.add("opened");
         document.getElementById("pinLockBox").classList.add("hidden");
         document.getElementById("unlockedBox").classList.remove("hidden");
         syncRecipientCard();
@@ -625,12 +1182,16 @@
         }
       } else {
         errEl.textContent = "Mã PIN chưa đúng, vui lòng thử lại.";
+        pinRow.classList.remove("shake");
+        void pinRow.offsetWidth;
+        pinRow.classList.add("shake");
       }
     }
 
     function lockCardAgain() {
       document.getElementById("recAudio").pause();
       document.getElementById("recVideo").pause();
+      document.getElementById("waxSeal").classList.remove("opened");
       document.getElementById("unlockedBox").classList.add("hidden");
       document.getElementById("pinLockBox").classList.remove("hidden");
       document.getElementById("reactionMsg").textContent = "";
@@ -639,38 +1200,47 @@
 
     function sendReaction() {
       triggerConfettiEffect();
-      document.getElementById("reactionMsg").textContent = `💖 Đã gửi lời cảm ơn tới ${currentCard.sender}!`;
+      document.getElementById("reactionMsg").textContent = `💖 Đã gửi trọn vẹn lời cảm ơn tới ${currentCard.sender}!`;
     }
 
     window.addEventListener("DOMContentLoaded", () => {
       const aud = document.getElementById("recAudio");
       const wave = document.getElementById("soundWave");
+      const waveBox = document.getElementById("waveBox");
+      const disc = document.getElementById("vinylDisc");
       const badge = document.getElementById("waveBadge");
       const note = document.getElementById("mediaNote");
 
       aud.addEventListener("play", () => {
         wave.classList.add("playing");
-        badge.textContent = "🔊 Đang phát...";
+        waveBox.classList.add("active-glow");
+        disc.classList.add("spinning");
+        badge.textContent = "🔊 Đang phát lời nhắn...";
       });
       aud.addEventListener("pause", () => {
         wave.classList.remove("playing");
+        waveBox.classList.remove("active-glow");
+        disc.classList.remove("spinning");
         if (aud.currentTime > 0 && !aud.ended) {
-          badge.textContent = "Tạm dừng";
+          badge.textContent = "Đã tạm dừng";
         }
       });
       aud.addEventListener("ended", () => {
         wave.classList.remove("playing");
-        badge.textContent = "Đã nghe xong";
+        waveBox.classList.remove("active-glow");
+        disc.classList.remove("spinning");
+        badge.textContent = "✨ Đã nghe trọn vẹn";
       });
       aud.addEventListener("error", () => {
         wave.classList.remove("playing");
+        waveBox.classList.remove("active-glow");
+        disc.classList.remove("spinning");
         badge.textContent = "Không phát được";
         note.textContent = "Không tải/phát được tệp này. Hãy thử tải một file .mp3 chuẩn.";
       });
 
       try {
         const params = new URLSearchParams(window.location.search);
-        // Hỗ trợ cả tham số rút gọn mới (p, t, m, a) và tham số cũ
         if (params.get("p") || params.get("t") || params.get("m") || params.get("mode") === "recipient" || params.get("pin")) {
           isScannedRecipientMode = true;
           currentCard.pin = params.get("p") || params.get("pin") || currentCard.pin;
