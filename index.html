@@ -228,7 +228,7 @@
           <button type="button" class="btn btn-outline" onclick="openRecipientDemo()">Quét thử QR ngay</button>
         </div>
         <p class="hint">
-          Đã kết nối Cloudinary (<code>buwnk3pf</code> / <code>ng09dphm</code>) — quét mã QR trên điện thoại sẽ phát được âm thanh.
+          Đã kết nối Cloudinary (<code>buwnk3pf</code> / <code>ng09dphm</code>) — giữ nguyên URL gốc để phát trên điện thoại.
         </p>
       </div>
     </section>
@@ -264,8 +264,8 @@
             </div>
           </div>
 
-          <audio id="recAudio" controls playsinline></audio>
-          <video id="recVideo" controls playsinline class="hidden"></video>
+          <audio id="recAudio" controls preload="metadata" playsinline></audio>
+          <video id="recVideo" controls preload="metadata" playsinline class="hidden"></video>
           <div id="mediaNote" class="hint"></div>
 
           <div style="margin-top:18px; display:flex; gap:8px; flex-wrap:wrap;">
@@ -298,12 +298,6 @@
     let mediaRecorder = null;
     let chunks = [];
     let isScannedRecipientMode = false;
-
-    function normalizeCloudinaryAudioUrl(url, mediaType) {
-      if (!url || mediaType === "video") return url;
-      // Ép đuôi .mp3 trên Cloudinary để phát ổn định hơn trên các trình duyệt di động
-      return url.replace(/\.(webm|ogg|m4a|wav|aac)(\?.*)?$/i, ".mp3");
-    }
 
     function updateFileInfoOnly() {
       const fileInfo = currentCard.mediaName ? ` • Tệp: ${currentCard.mediaName}` : "";
@@ -349,7 +343,7 @@
         });
         const data = await res.json();
         if (res.ok && data.secure_url) {
-          currentCard.mediaRemoteUrl = normalizeCloudinaryAudioUrl(data.secure_url, currentCard.mediaType);
+          currentCard.mediaRemoteUrl = data.secure_url;
           document.getElementById("recStatus").textContent = "✅ Đã tải lên Cloudinary & gắn link vào mã QR!";
         } else {
           currentCard.mediaRemoteUrl = "";
@@ -523,21 +517,25 @@
       const note = document.getElementById("mediaNote");
       const waveBox = document.getElementById("waveBox");
       const waveTitle = document.getElementById("waveTitle");
+      const badge = document.getElementById("waveBadge");
       const srcUrl = currentCard.mediaRemoteUrl || currentCard.mediaUrl || document.getElementById("previewAudio").src;
 
       if (currentCard.mediaType === "video" && srcUrl) {
         vid.src = srcUrl;
+        vid.load();
         vid.classList.remove("hidden");
         aud.classList.add("hidden");
         waveBox.classList.add("hidden");
         note.textContent = currentCard.mediaName ? `🎬 Video đính kèm: ${currentCard.mediaName}` : "";
       } else if (srcUrl) {
         aud.src = srcUrl;
+        aud.load();
         aud.classList.remove("hidden");
         vid.classList.add("hidden");
         waveBox.classList.remove("hidden");
         waveTitle.textContent = `🎧 ${currentCard.mediaName || "Lời nhắn giọng nói"}`;
-        note.textContent = "Bấm phát (hoặc đợi tự động phát) để nghe lời nhắn.";
+        badge.textContent = "Sẵn sàng phát";
+        note.textContent = "Bấm nút ▶ trên thanh phát để nghe lời nhắn.";
       } else {
         aud.classList.add("hidden");
         vid.classList.add("hidden");
@@ -594,8 +592,11 @@
 
         const aud = document.getElementById("recAudio");
         const vid = document.getElementById("recVideo");
+        const badge = document.getElementById("waveBadge");
         if (!aud.classList.contains("hidden") && aud.src) {
-          aud.play().catch(() => {});
+          aud.play().catch(() => {
+            badge.textContent = "Nhấn ▶ để nghe";
+          });
         } else if (!vid.classList.contains("hidden") && vid.src) {
           vid.play().catch(() => {});
         }
@@ -622,6 +623,7 @@
       const aud = document.getElementById("recAudio");
       const wave = document.getElementById("soundWave");
       const badge = document.getElementById("waveBadge");
+      const note = document.getElementById("mediaNote");
 
       aud.addEventListener("play", () => {
         wave.classList.add("playing");
@@ -629,11 +631,18 @@
       });
       aud.addEventListener("pause", () => {
         wave.classList.remove("playing");
-        badge.textContent = "Tạm dừng";
+        if (aud.currentTime > 0 && !aud.ended) {
+          badge.textContent = "Tạm dừng";
+        }
       });
       aud.addEventListener("ended", () => {
         wave.classList.remove("playing");
         badge.textContent = "Đã nghe xong";
+      });
+      aud.addEventListener("error", () => {
+        wave.classList.remove("playing");
+        badge.textContent = "Lỗi tải file";
+        note.textContent = "Không tải được tệp âm thanh từ link. Hãy thử tải file .mp3/.m4a khác.";
       });
 
       try {
