@@ -84,8 +84,8 @@
       padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-bottom: 10px;
     }
     .qr-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
-    .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
-    .status-msg { font-size: 13px; color: var(--forest); font-weight: 600; margin-top: 6px; }
+    .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; word-break: break-all; }
+    .status-msg { font-size: 13px; color: var(--forest); font-weight: 600; margin-top: 6px; word-break: break-word; }
 
     .vault-wrap {
       max-width: 520px; margin: 0 auto; text-align: center; position: relative; overflow: hidden;
@@ -207,6 +207,7 @@
               </label>
             </div>
             <div id="recStatus" class="status-msg">Chưa có file ghi âm — bấm Thu âm để tải lên & cập nhật mã QR.</div>
+            <div id="uploadedUrlBox" class="hint"></div>
             <audio id="previewAudio" controls class="hidden"></audio>
             <video id="previewVideo" controls class="hidden"></video>
           </div>
@@ -227,9 +228,6 @@
           <button type="button" class="btn btn-outline" onclick="window.print()">In mẫu thiệp</button>
           <button type="button" class="btn btn-outline" onclick="openRecipientDemo()">Quét thử QR ngay</button>
         </div>
-        <p class="hint">
-          Đã kết nối Cloudinary (<code>buwnk3pf</code> / <code>ng09dphm</code>) — giữ nguyên URL gốc để phát trên điện thoại.
-        </p>
       </div>
     </section>
 
@@ -328,14 +326,15 @@
     }
 
     async function uploadToCloudinary(blob, filename) {
+      const urlBox = document.getElementById("uploadedUrlBox");
       document.getElementById("genBtn").disabled = true;
-      document.getElementById("recStatus").textContent = "⏳ Đang tải âm thanh lên Cloudinary...";
+      document.getElementById("recStatus").textContent = "⏳ Đang tải file lên Cloudinary...";
+      urlBox.textContent = "";
 
       try {
         const fd = new FormData();
         fd.append("file", blob, filename || "voice-message.webm");
         fd.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-        fd.append("folder", "voicecard");
 
         const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
           method: "POST",
@@ -344,14 +343,16 @@
         const data = await res.json();
         if (res.ok && data.secure_url) {
           currentCard.mediaRemoteUrl = data.secure_url;
-          document.getElementById("recStatus").textContent = "✅ Đã tải lên Cloudinary & gắn link vào mã QR!";
+          document.getElementById("recStatus").textContent = "✅ Đã tải lên Cloudinary thành công!";
+          urlBox.textContent = "Link file: " + data.secure_url;
         } else {
           currentCard.mediaRemoteUrl = "";
-          document.getElementById("recStatus").textContent = "⚠️ Lỗi tải lên Cloudinary: " + (data.error?.message || "Kiểm tra Preset");
+          const errDetail = data.error?.message || `HTTP ${res.status}`;
+          document.getElementById("recStatus").textContent = "⚠️ Upload lỗi: " + errDetail;
         }
       } catch (e) {
         currentCard.mediaRemoteUrl = "";
-        document.getElementById("recStatus").textContent = "⚠️ Không kết nối được Cloudinary.";
+        document.getElementById("recStatus").textContent = "⚠️ Không thể kết nối tới Cloudinary.";
       } finally {
         document.getElementById("genBtn").disabled = false;
         generateQR(true);
@@ -363,7 +364,9 @@
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         chunks = [];
         mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.ondataavailable = e => {
+          if (e.data && e.data.size > 0) chunks.push(e.data);
+        };
         mediaRecorder.onstop = async () => {
           const mime = mediaRecorder.mimeType || "audio/webm";
           const ext = mime.includes("mp4") ? "m4a" : "webm";
@@ -372,7 +375,7 @@
 
           currentCard.mediaUrl = url;
           currentCard.mediaType = "audio";
-          currentCard.mediaName = "Ghi âm giọng nói." + ext;
+          currentCard.mediaName = "ghi-am." + ext;
 
           const aud = document.getElementById("previewAudio");
           aud.classList.remove("hidden");
@@ -485,7 +488,7 @@
         const statusEl = document.getElementById("qrUpdateStatus");
         box.classList.add("updated");
         statusEl.textContent = currentCard.mediaRemoteUrl
-          ? "✨ QR đã gắn link âm thanh — quét trên điện thoại để nghe!"
+          ? "✨ QR đã gắn link âm thanh!"
           : "✨ Mã QR đã được cập nhật!";
         setTimeout(() => box.classList.remove("updated"), 800);
       }
@@ -535,12 +538,12 @@
         waveBox.classList.remove("hidden");
         waveTitle.textContent = `🎧 ${currentCard.mediaName || "Lời nhắn giọng nói"}`;
         badge.textContent = "Sẵn sàng phát";
-        note.textContent = "Bấm nút ▶ trên thanh phát để nghe lời nhắn.";
+        note.textContent = srcUrl;
       } else {
         aud.classList.add("hidden");
         vid.classList.add("hidden");
         waveBox.classList.add("hidden");
-        note.textContent = "Không tìm thấy tệp âm thanh cho thiệp này.";
+        note.textContent = "Không có liên kết tệp âm thanh nào trong thiệp.";
       }
     }
 
@@ -641,8 +644,8 @@
       });
       aud.addEventListener("error", () => {
         wave.classList.remove("playing");
-        badge.textContent = "Lỗi tải file";
-        note.textContent = "Không tải được tệp âm thanh từ link. Hãy thử tải file .mp3/.m4a khác.";
+        badge.textContent = "Không phát được";
+        note.textContent = "Không tải/phát được tệp này. Hãy thử tải một file .mp3 có sẵn.";
       });
 
       try {
