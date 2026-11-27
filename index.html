@@ -1,1042 +1,645 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tạo Thiệp Chúc Mừng Tương Tác</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Canvas Confetti -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <!-- QRCode.js -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoiceCard — Thiệp Giọng Nói Bảo Mật</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            handwriting: ['"Dancing Script"', 'cursive'],
-            serif: ['"Playfair Display"', 'serif'],
-          },
-          animation: {
-            'float': 'float 3s ease-in-out infinite',
-            'pulse-glow': 'pulseGlow 2s infinite',
-          },
-          keyframes: {
-            float: {
-              '0%, 100%': { transform: 'translateY(0px)' },
-              '50%': { transform: 'translateY(-10px)' },
-            },
-            pulseGlow: {
-              '0%, 100%': { opacity: '0.6', transform: 'scale(1)' },
-              '50%': { opacity: '1', transform: 'scale(1.05)' },
-            }
-          }
-        }
-      }
-    }
-  </script>
-
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
+    :root {
+      --bg: #FAF7F2; --card: #FFFFFF; --ink: #172A27; --muted: #5E6D69;
+      --accent: #B8860B; --accent-soft: #F5EEDB; --forest: #1B3632;
+      --border: #E6DFD3; --danger: #B91C1C;
     }
-    ::-webkit-scrollbar-track {
-      background: rgba(0,0,0,0.05);
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--ink); line-height: 1.5; padding: 20px; min-height: 100vh;
     }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.2);
-      border-radius: 10px;
+    body.recipient-only {
+      background: radial-gradient(circle at top, #F5EEDB 0%, #FAF7F2 65%);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .container { max-width: 1040px; width: 100%; margin: 0 auto; }
+    header {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+      gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+    }
+    .brand { font-size: 24px; font-weight: 800; color: var(--forest); }
+    .brand span { color: var(--accent); }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 9px 16px; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--card); color: var(--ink); font-weight: 600; cursor: pointer; font-size: 14px; transition: 0.2s;
+    }
+    .tab-btn.active { background: var(--forest); color: #fff; border-color: var(--forest); }
+    .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 24px; align-items: start; }
+    @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+    .panel {
+      background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+      padding: 22px; box-shadow: 0 6px 24px rgba(27,54,50,0.04);
+    }
+    h2 { font-size: 18px; margin-bottom: 14px; color: var(--forest); }
+    .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .chip {
+      padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+      background: var(--accent-soft); color: var(--forest); border: 1px solid #E6D5A8; cursor: pointer; transition: 0.2s;
+    }
+    .chip:hover { background: #ebdcb6; }
+    .field { margin-bottom: 14px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--forest); }
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+      font-size: 14px; font-family: inherit; background: #FFFDF9;
+    }
+    textarea { min-height: 76px; resize: vertical; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 520px) { .row-2 { grid-template-columns: 1fr; } }
+    .audio-box { background: #FAF7F2; border: 1px dashed #C8B99B; border-radius: 12px; padding: 12px; }
+    .audio-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    .btn {
+      padding: 10px 16px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer;
+      font-size: 14px; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: #fff; width: 100%; justify-content: center; padding: 13px; font-size: 15px; }
+    .btn-forest { background: var(--forest); color: #fff; }
+    .btn-outline { background: #fff; color: var(--ink); border: 1px solid var(--border); }
+    .btn-danger { background: var(--danger); color: #fff; animation: pulseRec 1.2s infinite; }
+    @keyframes pulseRec { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    audio, video { width: 100%; margin-top: 8px; border-radius: 10px; max-height: 220px; }
+
+    .qr-card { text-align: center; }
+    .qr-box {
+      display: inline-flex; justify-content: center; align-items: center; padding: 14px;
+      background: #fff; border: 2px solid var(--accent-soft); border-radius: 16px;
+      margin: 12px auto; width: 220px; height: 220px; transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    .qr-box.updated { transform: scale(1.04); border-color: var(--accent); box-shadow: 0 0 20px rgba(184,134,11,0.25); }
+    .qr-box img, .qr-box canvas { display: block; width: 190px !important; height: 190px !important; }
+    .pin-badge {
+      display: inline-block; background: var(--accent-soft); color: var(--forest);
+      padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-bottom: 10px;
+    }
+    .qr-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+    .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+    .status-msg { font-size: 13px; color: var(--forest); font-weight: 600; margin-top: 6px; }
+
+    /* Recipient View & Rich Effects */
+    .vault-wrap {
+      max-width: 520px; margin: 0 auto; text-align: center; position: relative; overflow: hidden;
+      border: 1.5px solid #E6D5A8; box-shadow: 0 14px 36px rgba(27, 54, 50, 0.08);
+    }
+    .pin-inputs { display: flex; justify-content: center; gap: 10px; margin: 18px 0; }
+    .pin-inputs input {
+      width: 52px; height: 58px; text-align: center; font-size: 24px; font-weight: 800;
+      border-radius: 12px; border: 2px solid var(--border); transition: 0.2s;
+    }
+    .pin-inputs input:focus { outline: none; border-color: var(--accent); transform: translateY(-2px); }
+    .error-text { color: var(--danger); font-size: 13.5px; font-weight: 600; min-height: 20px; margin-bottom: 8px; }
+
+    .unlocked-card {
+      text-align: left;
+      background: linear-gradient(155deg, #FFFDF9 0%, #F8EED8 100%);
+      border: 1.5px solid #DEC996; border-radius: 18px; padding: 24px; margin-top: 16px;
+      box-shadow: 0 12px 30px rgba(184, 134, 11, 0.14);
+      animation: cardPopIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    @keyframes cardPopIn {
+      0% { opacity: 0; transform: translateY(22px) scale(0.95); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .tag {
+      display: inline-block; background: var(--forest); color: #fff; font-size: 11.5px;
+      font-weight: 700; padding: 4px 12px; border-radius: 999px; margin-bottom: 10px; letter-spacing: 0.5px;
     }
 
-    /* Envelope & Card Flip 3D Styles */
-    .perspective-1000 {
-      perspective: 1000px;
+    /* Sóng âm chuyển động khi phát ghi âm */
+    .wave-wrap {
+      background: rgba(255, 255, 255, 0.72); border: 1px solid #E6D5A8;
+      border-radius: 14px; padding: 12px; margin: 12px 0;
     }
-    .preserve-3d {
-      transform-style: preserve-3d;
+    .wave-label { font-size: 12px; font-weight: 700; color: var(--forest); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .sound-wave { display: flex; align-items: center; justify-content: center; gap: 5px; height: 30px; }
+    .sound-wave span {
+      display: block; width: 5px; height: 7px; background: var(--accent); border-radius: 999px; transition: height 0.2s ease;
     }
-    .backface-hidden {
-      backface-visibility: hidden;
-    }
-    .rotate-y-180 {
-      transform: rotateY(180deg);
-    }
-
-    /* Envelope Flap Transition */
-    .envelope-flap {
-      transform-origin: top;
-      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .envelope-open .envelope-flap {
-      transform: rotateX(180deg);
-      z-index: 5;
-    }
-
-    /* Gradient Backgrounds */
-    .bg-theme-birthday {
-      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #feada6 100%);
-    }
-    .bg-theme-christmas {
-      background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-    }
-    .bg-theme-love {
-      background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
-    }
-    .bg-theme-thanks {
-      background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+    .sound-wave.playing span { animation: waveBounce 0.75s ease-in-out infinite alternate; }
+    .sound-wave.playing span:nth-child(2) { animation-delay: 0.1s; }
+    .sound-wave.playing span:nth-child(3) { animation-delay: 0.22s; }
+    .sound-wave.playing span:nth-child(4) { animation-delay: 0.35s; }
+    .sound-wave.playing span:nth-child(5) { animation-delay: 0.18s; }
+    .sound-wave.playing span:nth-child(6) { animation-delay: 0.3s; }
+    .sound-wave.playing span:nth-child(7) { animation-delay: 0.12s; }
+    .sound-wave.playing span:nth-child(8) { animation-delay: 0.25s; }
+    @keyframes waveBounce {
+      0% { height: 7px; background: var(--accent); }
+      100% { height: 28px; background: var(--forest); }
     }
 
-    /* Decorative Floating Elements */
-    .particle {
-      position: absolute;
-      pointer-events: none;
-      animation: floatParticle 8s linear infinite;
-    }
-    @keyframes floatParticle {
-      0% { transform: translateY(100vh) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
-    }
+    .hidden { display: none !important; }
+    @media print { header, .panel:first-child, .qr-actions, .hint, .tabs { display: none !important; } body { background: #fff; } .panel { box-shadow: none; border: 1px solid #ccc; } }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased selection:bg-rose-500 selection:text-white">
-
-  <!-- Floating Particles Canvas Container -->
-  <div id="particles-container" class="fixed inset-0 pointer-events-none z-0 overflow-hidden"></div>
-
-  <!-- Notification Toast -->
-  <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-150%] opacity-0 transition-all duration-300 bg-slate-800 border border-slate-700 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3">
-    <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-xl"></i>
-    <span id="toast-message" class="text-sm font-medium">Thông báo</span>
-  </div>
-
-  <!-- MAIN APP WRAPPER -->
-  <div id="app" class="relative z-10 min-h-screen flex flex-col justify-between max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    
-    <!-- HEADER -->
-    <header class="flex justify-between items-center mb-8">
-      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('create')">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 to-amber-400 flex items-center justify-center shadow-lg shadow-rose-500/20">
-          <i class="fa-solid fa-[#000] fa-gift text-white text-lg"></i>
-        </div>
-        <div>
-          <h1 class="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">CardMagic</h1>
-          <p class="text-xs text-slate-400">Trao lời chúc - Trọn yêu thương</p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <button id="nav-create-btn" onclick="switchView('create')" class="px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 bg-rose-500 text-white shadow-lg shadow-rose-500/25 hover:bg-rose-600">
-          <i class="fa-solid fa-pen-to-square mr-1.5"></i> Tạo thiệp mới
-        </button>
+<body>
+  <div class="container">
+    <header id="mainHeader">
+      <div class="brand">Voice<span>Card</span></div>
+      <div class="tabs" id="navTabs">
+        <button class="tab-btn active" id="tabSender" onclick="switchTab('sender')">1. Tạo Thiệp & Lấy QR</button>
+        <button class="tab-btn" id="tabRecipient" onclick="switchTab('recipient')">2. Xem thử giao diện Nhận Thiệp</button>
       </div>
     </header>
 
-    <!-- VIEW 1: CREATOR FORM MODE -->
-    <main id="view-create" class="grid lg:grid-cols-12 gap-8 items-start my-auto">
-      
-      <!-- FORM INPUT SECTION -->
-      <div class="lg:col-span-7 bg-slate-800/80 backdrop-blur-xl border border-slate-700/60 rounded-3xl p-6 sm:p-8 shadow-2xl">
-        <div class="mb-6">
-          <h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-            <span>Thiết Kế Thiệp Chúc Mừng</span>
-            <span class="text-xs font-normal text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20">Miễn phí</span>
-          </h2>
-          <p class="text-slate-400 text-sm">Điền thông tin bên dưới và ghi âm giọng nói của bạn để gửi tặng người thân yêu.</p>
+    <!-- KHU VỰC TẠO THIỆP & LẤY MÃ QR -->
+    <section id="senderView" class="grid">
+      <div class="panel">
+        <h2>Thiết kế lời nhắn cho thiệp</h2>
+        <div class="presets">
+          <button type="button" class="chip" onclick="applyPreset('grad')">Mẫu Tốt nghiệp</button>
+          <button type="button" class="chip" onclick="applyPreset('bday')">Mẫu Sinh nhật</button>
+          <button type="button" class="chip" onclick="applyPreset('b2b')">Mẫu Tri ân khách hàng</button>
         </div>
 
-        <form id="cardForm" class="space-y-5" onsubmit="event.preventDefault();">
-          
-          <!-- Themes Selection -->
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5">1. Chọn Chủ Đề Thiệp</label>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              
-              <button type="button" onclick="selectTheme('birthday')" id="theme-birthday" class="theme-btn active border-2 border-rose-500 bg-slate-700/60 p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-center transition-all">
-                <span class="text-2xl">🎂</span>
-                <span class="text-xs font-medium text-white">Sinh Nhật</span>
-              </button>
+        <div class="row-2">
+          <div class="field">
+            <label>Chủ đề thiệp</label>
+            <select id="themeSelect" onchange="generateQR()">
+              <option value="Tốt nghiệp">Tốt nghiệp</option>
+              <option value="Sinh nhật">Sinh nhật</option>
+              <option value="Kỷ niệm & Yêu thương">Kỷ niệm & Yêu thương</option>
+              <option value="Tri ân đối tác / Khách hàng">Tri ân đối tác / Khách hàng</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Mã PIN bảo mật (4 chữ số)</label>
+            <input id="pinInput" type="text" maxlength="4" value="1234" oninput="this.value=this.value.replace(/\D/g,''); generateQR();" />
+          </div>
+        </div>
 
-              <button type="button" onclick="selectTheme('christmas')" id="theme-christmas" class="theme-btn border-2 border-transparent bg-slate-700/40 hover:bg-slate-700/60 p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-center transition-all">
-                <span class="text-2xl">🎄</span>
-                <span class="text-xs font-medium text-slate-300">Giáng Sinh</span>
-              </button>
+        <div class="row-2">
+          <div class="field">
+            <label>Người gửi</label>
+            <input id="senderInput" type="text" value="Minh Anh" oninput="generateQR()" />
+          </div>
+          <div class="field">
+            <label>Người nhận</label>
+            <input id="recipientInput" type="text" value="Lan Phương" oninput="generateQR()" />
+          </div>
+        </div>
 
-              <button type="button" onclick="selectTheme('love')" id="theme-love" class="theme-btn border-2 border-transparent bg-slate-700/40 hover:bg-slate-700/60 p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-center transition-all">
-                <span class="text-2xl">💖</span>
-                <span class="text-xs font-medium text-slate-300">Tình Yêu</span>
-              </button>
+        <div class="field">
+          <label>Lời nhắn văn bản</label>
+          <textarea id="messageInput" oninput="generateQR()">Chúc mừng cậu đã hoàn thành chặng đường đại học thật rực rỡ! Nghe lời nhắn thoại mình thu riêng cho cậu nhé.</textarea>
+        </div>
 
-              <button type="button" onclick="selectTheme('thanks')" id="theme-thanks" class="theme-btn border-2 border-transparent bg-slate-700/40 hover:bg-slate-700/60 p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-center transition-all">
-                <span class="text-2xl">🌻</span>
-                <span class="text-xs font-medium text-slate-300">Cảm Ơn</span>
-              </button>
+        <div class="field">
+          <label>Lời nhắn giọng nói / Video</label>
+          <div class="audio-box">
+            <div class="audio-actions">
+              <button type="button" class="btn btn-forest" id="recBtn" onclick="toggleRecord()">🎙️ Thu âm giọng nói</button>
+              <button type="button" class="btn btn-danger hidden" id="stopBtn" onclick="stopRecord()">⏹️ Dừng thu âm</button>
+              <label class="btn btn-outline" style="margin:0; cursor:pointer;">
+                📁 Tải file âm thanh/video
+                <input type="file" id="mediaFile" accept="audio/*,video/*" style="display:none" onchange="handleFileUpload(event)" />
+              </label>
             </div>
+            <div id="recStatus" class="status-msg">Chưa có file ghi âm — bấm Thu âm để tự động cập nhật mã QR.</div>
+            <audio id="previewAudio" controls class="hidden"></audio>
+            <video id="previewVideo" controls class="hidden"></video>
           </div>
+        </div>
 
-          <!-- Sender & Receiver Names -->
-          <div class="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Tên Người Nhận</label>
-              <div class="relative">
-                <i class="fa-solid fa-user text-slate-400 absolute left-3.5 top-3.5 text-sm"></i>
-                <input type="text" id="receiverName" placeholder="VD: Hoàng Yến, Mẹ Yêu..." class="w-full bg-slate-900/60 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all">
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Tên Người Gửi</label>
-              <div class="relative">
-                <i class="fa-solid fa-pen text-slate-400 absolute left-3.5 top-3.5 text-sm"></i>
-                <input type="text" id="senderName" placeholder="VD: Minh Trí..." class="w-full bg-slate-900/60 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all">
-              </div>
-            </div>
-          </div>
-
-          <!-- Wish Textarea -->
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Lời Chúc Viết Tay</label>
-            <textarea id="wishMessage" rows="4" placeholder="Nhập những lời chúc tốt đẹp nhất gửi đến người nhận..." class="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all leading-relaxed resize-none"></textarea>
-          </div>
-
-          <!-- Audio Recording Section -->
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">2. Ghi Âm Lời Chúc (Tùy chọn)</label>
-            <div class="bg-slate-900/60 border border-slate-700/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-              
-              <div class="flex items-center gap-3 w-full sm:w-auto">
-                <div id="mic-status-icon" class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
-                  <i class="fa-solid fa-microphone text-lg"></i>
-                </div>
-                <div>
-                  <div id="record-status-text" class="text-sm font-semibold text-white">Chưa có bản ghi âm</div>
-                  <div id="record-timer" class="text-xs text-slate-400 font-mono">00:00 / 01:00 (Tối đa)</div>
-                </div>
-              </div>
-
-              <!-- Action Buttons -->
-              <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <button type="button" id="btn-start-record" onclick="toggleRecording()" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 transition-all flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-circle text-rose-500 text-xs"></i> Bắt đầu ghi âm
-                </button>
-
-                <button type="button" id="btn-play-record" onclick="playRecord()" class="hidden px-3 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 transition-all items-center gap-1.5">
-                  <i class="fa-solid fa-play"></i> Nghe lại
-                </button>
-
-                <button type="button" id="btn-delete-record" onclick="deleteRecord()" class="hidden p-2.5 rounded-xl text-xs text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-all">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
-              </div>
-            </div>
-            <audio id="audio-preview" class="hidden"></audio>
-          </div>
-
-          <!-- Submit Buttons -->
-          <div class="pt-2 flex flex-col sm:flex-row gap-3">
-            <button type="button" onclick="previewCard()" class="flex-1 py-3.5 px-6 rounded-xl text-sm font-semibold text-white bg-slate-700 hover:bg-slate-600 transition-all flex items-center justify-center gap-2 shadow-lg">
-              <i class="fa-solid fa-eye"></i> Xem Trước Thiệp
-            </button>
-
-            <button type="button" onclick="generateQRAndShare()" class="flex-1 py-3.5 px-6 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-500/25">
-              <i class="fa-solid fa-qrcode"></i> Tạo Mã QR & Chia Sẻ
-            </button>
-          </div>
-
-        </form>
+        <button type="button" class="btn btn-primary" onclick="generateQR(true)">Cập nhật Thiệp & Sinh Mã QR</button>
       </div>
 
-      <!-- LIVE MINI PREVIEW CARD -->
-      <div class="lg:col-span-5 flex flex-col items-center justify-center sticky top-8">
-        <div class="w-full text-center mb-3">
-          <span class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Mô phỏng hiển thị</span>
+      <div class="panel qr-card">
+        <h2>Mã QR của thiệp</h2>
+        <div class="pin-badge" id="pinDisplay">Mã PIN mở khóa: 1234</div>
+        <div class="qr-box" id="qrContainer"></div>
+        <div id="qrUpdateStatus" class="status-msg" style="color: var(--accent);"></div>
+        <div id="qrLinkText" class="hint"></div>
+
+        <div class="qr-actions">
+          <button type="button" class="btn btn-forest" onclick="downloadQR()">Tải ảnh QR (PNG)</button>
+          <button type="button" class="btn btn-outline" onclick="window.print()">In mẫu thiệp</button>
+          <button type="button" class="btn btn-outline" onclick="openRecipientDemo()">Quét thử QR ngay</button>
         </div>
-        
-        <div id="mini-preview-card" class="w-full max-w-sm aspect-[4/5] rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between transition-all duration-500 border border-white/20 bg-theme-birthday">
-          
-          <!-- Background Decor overlay -->
-          <div class="absolute inset-0 bg-black/10 backdrop-blur-[2px]"></div>
+        <p class="hint">
+          Khi thu âm hoặc tải tệp lên, <strong>Mã QR sẽ tự động hiện & cập nhật ngay</strong>. Khi người nhận quét QR sẽ chỉ thấy màn hình mở thiệp.
+        </p>
+      </div>
+    </section>
 
-          <!-- Top Section -->
-          <div class="relative z-10 flex justify-between items-start">
-            <div class="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 text-xs font-semibold text-white uppercase tracking-wider" id="mini-theme-tag">
-              🎂 Sinh Nhật
+    <!-- KHU VỰC NGƯỜI NHẬN THIỆP (KHI QUÉT QR CHỈ HIỆN PHẦN NÀY) -->
+    <section id="recipientView" class="hidden">
+      <div class="panel vault-wrap">
+        <span class="tag" id="recThemeTag">THIỆP GIỌNG NÓI</span>
+        <h2 id="recGreeting" style="font-size: 22px;">Thiệp dành cho bạn</h2>
+        <p class="hint" id="recHintDemo">Nhập mã PIN 4 số để mở khóa lời nhắn riêng tư.</p>
+
+        <div id="pinLockBox">
+          <div class="pin-inputs">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" oninput="movePin(this, 0)" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" oninput="movePin(this, 1)" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" oninput="movePin(this, 2)" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit" oninput="movePin(this, 3)" />
+          </div>
+          <div class="error-text" id="pinError"></div>
+          <button type="button" class="btn btn-primary" onclick="unlockCard()">🔓 Mở khóa lời nhắn</button>
+        </div>
+
+        <div id="unlockedBox" class="unlocked-card hidden">
+          <div style="font-size:13px; color:var(--muted); margin-bottom:8px; font-weight:600;" id="cardMeta"></div>
+          <p id="cardText" style="font-size:16px; margin-bottom:14px; line-height:1.6; color: var(--ink);"></p>
+
+          <div class="wave-wrap" id="waveBox">
+            <div class="wave-label">
+              <span id="waveTitle">🎧 Lời nhắn âm thanh</span>
+              <span id="waveBadge" style="color: var(--accent);">Sẵn sàng phát</span>
             </div>
-            <i class="fa-solid fa-heart text-white/40 text-xl"></i>
+            <div class="sound-wave" id="soundWave">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
           </div>
 
-          <!-- Center Content -->
-          <div class="relative z-10 text-center my-auto space-y-3 px-2">
-            <p class="text-xs text-white/80 uppercase tracking-widest font-medium">Gửi tới</p>
-            <h3 id="mini-receiver" class="text-2xl font-serif font-bold text-white drop-shadow-md">Hoàng Yến</h3>
-            <p id="mini-message" class="text-sm text-white/90 font-handwriting text-lg italic line-clamp-3 leading-relaxed">
-              "Chúc bạn một ngày sinh nhật thật tràn ngập niềm vui, hạnh phúc và thành công mới!"
-            </p>
-          </div>
+          <audio id="recAudio" controls></audio>
+          <video id="recVideo" controls class="hidden"></video>
+          <div id="mediaNote" class="hint"></div>
 
-          <!-- Bottom Section -->
-          <div class="relative z-10 border-t border-white/20 pt-4 flex items-center justify-between">
-            <div>
-              <p class="text-[10px] text-white/70 uppercase">Từ người gửi</p>
-              <p id="mini-sender" class="text-xs font-bold text-white">Minh Trí</p>
-            </div>
-            <div id="mini-audio-badge" class="hidden flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-semibold text-white">
-              <i class="fa-solid fa-microphone-lines animate-pulse text-amber-300"></i> Có giọng nói
-            </div>
+          <div style="margin-top:18px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-forest" onclick="sendReaction()">💖 Gửi lời cảm ơn</button>
+            <button type="button" class="btn btn-outline" onclick="lockCardAgain()">🔒 Khóa lại</button>
           </div>
+          <div id="reactionMsg" class="status-msg" style="margin-top: 10px;"></div>
         </div>
       </div>
-
-    </main>
-
-    <!-- VIEW 2: INTERACTIVE RECEIVER CARD PREVIEW MODE -->
-    <main id="view-preview" class="hidden flex-1 flex flex-col items-center justify-center relative py-6">
-      
-      <!-- Top Action Bar -->
-      <div class="w-full max-w-xl flex items-center justify-between mb-6 z-20">
-        <button onclick="switchView('create')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700 transition-all border border-slate-700 flex items-center gap-2">
-          <i class="fa-solid fa-arrow-left"></i> Quay lại chỉnh sửa
-        </button>
-
-        <button id="btn-toggle-audio-bg" onclick="toggleBackgroundMusic()" class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800/80 text-amber-300 hover:bg-slate-700 transition-all border border-slate-700 flex items-center gap-1.5">
-          <i class="fa-solid fa-music"></i> <span id="bg-music-text">Nhạc nền: Tắt</span>
-        </button>
-      </div>
-
-      <!-- ENVELOPE / CARD CONTAINER -->
-      <div class="w-full max-w-md perspective-1000 my-auto">
-        
-        <!-- ENVELOPE STATE -->
-        <div id="envelope-box" onclick="openEnvelope()" class="relative w-full aspect-[4/3] bg-amber-100 rounded-2xl shadow-2xl border-2 border-amber-200/50 cursor-pointer group transition-all transform hover:scale-[1.02] flex items-center justify-center overflow-hidden">
-          
-          <!-- Envelope Pattern & Texture -->
-          <div class="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
-          
-          <!-- Triangle Flap (Top) -->
-          <div class="envelope-flap absolute top-0 inset-x-0 h-1/2 bg-amber-200 border-b border-amber-300 shadow-md flex items-center justify-center rounded-t-2xl z-20">
-            <div class="w-12 h-12 rounded-full bg-rose-500 shadow-lg flex items-center justify-center text-white border-2 border-white translate-y-6">
-              <i class="fa-solid fa-heart text-lg group-hover:scale-125 transition-transform"></i>
-            </div>
-          </div>
-
-          <!-- Bottom Pocket Fold Effects -->
-          <div class="absolute inset-0 border-t-[80px] border-t-transparent border-b-[120px] border-b-amber-200/90 border-x-[160px] border-x-amber-200/50 pointer-events-none"></div>
-
-          <!-- Hint Text -->
-          <div class="relative z-10 text-center mt-12 animate-bounce">
-            <p class="text-amber-900 font-serif font-bold text-lg">Thiệp Chúc Mừng Gửi Bạn</p>
-            <p class="text-xs text-amber-700/80 mt-1">Chạm vào đây để mở phong bì ✨</p>
-          </div>
-        </div>
-
-        <!-- REVEALED CARD STATE (HIDDEN INITIALLY) -->
-        <div id="card-opened" class="hidden w-full aspect-[4/5] rounded-3xl p-8 shadow-2xl relative overflow-hidden flex flex-col justify-between border-2 border-white/30 transition-all duration-700 transform scale-95 opacity-0">
-          
-          <!-- Card Decorative Particles Layer -->
-          <div class="absolute inset-0 bg-black/10 backdrop-blur-[2px]"></div>
-
-          <!-- Top Section -->
-          <div class="relative z-10 flex justify-between items-center border-b border-white/20 pb-4">
-            <span id="preview-card-theme" class="text-xs font-bold tracking-widest text-white uppercase bg-white/20 px-3 py-1 rounded-full backdrop-blur-md">
-              🎂 Sinh Nhật
-            </span>
-            <div class="flex gap-2">
-              <button onclick="triggerEffects()" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all" title="Bắn pháo hoa">
-                ✨
-              </button>
-            </div>
-          </div>
-
-          <!-- Card Body -->
-          <div class="relative z-10 my-auto text-center space-y-4 px-2">
-            <p class="text-xs uppercase tracking-widest text-white/80 font-semibold">Thân gửi</p>
-            <h2 id="preview-card-receiver" class="text-3xl sm:text-4xl font-serif font-bold text-white drop-shadow-md">Hoàng Yến</h2>
-            
-            <div class="py-2">
-              <p id="preview-card-message" class="text-base sm:text-lg text-white/95 font-handwriting italic leading-relaxed max-h-48 overflow-y-auto px-2">
-                "Chúc bạn một tuổi mới tràn đầy năng lượng, luôn xinh đẹp và gặt hái được thật nhiều thành công rực rỡ trong cuộc sống!"
-              </p>
-            </div>
-
-            <!-- Voice Recording Audio Play Button inside Card -->
-            <div id="preview-audio-container" class="hidden pt-2">
-              <button id="btn-card-play-voice" onclick="playVoiceInCard()" class="mx-auto px-5 py-2.5 rounded-full bg-white/20 hover:bg-white/30 text-white border border-white/40 backdrop-blur-md font-semibold text-xs transition-all flex items-center gap-2.5 shadow-lg group">
-                <i id="card-voice-icon" class="fa-solid fa-circle-play text-amber-300 text-base group-hover:scale-110 transition-transform"></i>
-                <span id="card-voice-text">Nghe lời chúc giọng nói</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Card Footer -->
-          <div class="relative z-10 border-t border-white/20 pt-4 flex justify-between items-end">
-            <div>
-              <p class="text-[10px] uppercase text-white/70">Người gửi lời chúc</p>
-              <p id="preview-card-sender" class="text-sm font-bold text-white">Minh Trí</p>
-            </div>
-            <div class="text-right">
-              <span class="text-[10px] text-white/60 font-mono">CardMagic ✨</span>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-    </main>
-
-    <!-- FOOTER -->
-    <footer class="mt-8 text-center text-xs text-slate-500 py-3 border-t border-slate-800/60">
-      <p>Ứng dụng tạo thiệp mừng tương tác &bull; Lưu giữ khoảnh khắc & Lời chúc ấm áp</p>
-    </footer>
-
+    </section>
   </div>
 
-  <!-- MODAL: QR CODE & SHARE -->
-  <div id="qr-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
-    <div class="bg-slate-800 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl transform scale-90 transition-transform duration-300" id="qr-modal-content">
-      
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-bold text-white">Mã QR Thiệp Mừng</h3>
-        <button onclick="closeQRModal()" class="text-slate-400 hover:text-white p-1">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-
-      <p class="text-xs text-slate-400 mb-5">Người nhận chỉ cần quét mã QR này để mở thiệp và nghe đoạn ghi âm lời chúc của bạn!</p>
-
-      <!-- QR Canvas Wrapper -->
-      <div class="bg-white p-4 rounded-2xl inline-block shadow-inner mb-5">
-        <div id="qrcode-container" class="flex justify-center"></div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="space-y-2.5">
-        <button onclick="copyShareLink()" class="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-rose-500 hover:bg-rose-600 text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20">
-          <i class="fa-solid fa-link"></i> Sao Chép Đường Dẫn Thiệp
-        </button>
-
-        <button onclick="downloadQRCode()" class="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 transition-all flex items-center justify-center gap-2">
-          <i class="fa-solid fa-download"></i> Tải Ảnh QR Về Máy
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- BACKGROUND MUSIC AUDIO SYSTEM (Royalty Free Soft Chords generated via Web Audio API) -->
-
-  <!-- APPLICATION LOGIC JS -->
   <script>
-    // --- GLOBAL STATE ---
-    const state = {
-      theme: 'birthday',
-      sender: 'Minh Trí',
-      receiver: 'Hoàng Yến',
-      message: 'Chúc bạn một tuổi mới tràn đầy niềm vui, hạnh phúc và luôn thành công trong cuộc sống!',
-      audioBase64: null,
-      bgMusicPlaying: false
+    let currentCard = {
+      id: "VC-" + Math.floor(1000 + Math.random() * 9000),
+      theme: "Tốt nghiệp",
+      pin: "1234",
+      sender: "Minh Anh",
+      recipient: "Lan Phương",
+      message: "Chúc mừng cậu đã hoàn thành chặng đường đại học thật rực rỡ! Nghe lời nhắn thoại mình thu riêng cho cậu nhé.",
+      mediaType: "audio",
+      mediaUrl: "",
+      mediaBase64: "",
+      mediaName: ""
     };
 
-    // Recording variables
     let mediaRecorder = null;
-    let audioChunks = [];
-    let recordTimerInterval = null;
-    let recordSeconds = 0;
-    let recordedAudioBlob = null;
-    let currentAudioPlayer = null;
-    let voiceCardAudio = null;
+    let chunks = [];
+    let isScannedRecipientMode = false;
 
-    // Background Audio Context
-    let audioCtx = null;
-    let bgOscillator = null;
+    function updateFileInfoOnly() {
+      const fileInfo = currentCard.mediaName ? ` • Tệp: ${currentCard.mediaName}` : "";
+      document.getElementById("qrLinkText").textContent = `Mã thiệp: ${currentCard.id} — Gửi ${currentCard.recipient}${fileInfo}`;
+    }
 
-    // Theme Configs
-    const themesConfig = {
-      birthday: {
-        name: 'Sinh Nhật',
-        icon: '🎂',
-        bgClass: 'bg-theme-birthday',
-        particleType: 'confetti',
-        badge: '🎂 Sinh Nhật'
-      },
-      christmas: {
-        name: 'Giáng Sinh',
-        icon: '🎄',
-        bgClass: 'bg-theme-christmas',
-        particleType: 'snow',
-        badge: '🎄 Giáng Sinh & Năm Mới'
-      },
-      love: {
-        name: 'Tình Yêu',
-        icon: '💖',
-        bgClass: 'bg-theme-love',
-        particleType: 'hearts',
-        badge: '💖 Tình Yêu'
-      },
-      thanks: {
-        name: 'Cảm Ơn',
-        icon: '🌻',
-        bgClass: 'bg-theme-thanks',
-        particleType: 'stars',
-        badge: '🌻 Tri Tân & Cảm Ơn'
-      }
-    };
-
-    // --- INITIALIZATION ---
-    window.onload = function() {
-      // Setup Realtime Input Listeners
-      document.getElementById('senderName').addEventListener('input', (e) => {
-        state.sender = e.target.value.trim() || 'Minh Trí';
-        updateMiniPreview();
-      });
-
-      document.getElementById('receiverName').addEventListener('input', (e) => {
-        state.receiver = e.target.value.trim() || 'Hoàng Yến';
-        updateMiniPreview();
-      });
-
-      document.getElementById('wishMessage').addEventListener('input', (e) => {
-        state.message = e.target.value.trim() || 'Chúc bạn một ngày tràn đầy niềm vui và hạnh phúc!';
-        updateMiniPreview();
-      });
-
-      // Check URL parameters / Hash for Receiver Card Link
-      checkUrlData();
-      renderBackgroundParticles();
-    };
-
-    // --- UI NAVIGATION & VIEWS ---
-    function switchView(viewName) {
-      const createView = document.getElementById('view-create');
-      const previewView = document.getElementById('view-preview');
-      const navBtn = document.getElementById('nav-create-btn');
-
-      if (viewName === 'create') {
-        createView.classList.remove('hidden');
-        previewView.classList.add('hidden');
-        navBtn.classList.add('hidden');
-        stopBackgroundMusic();
+    function applyPreset(type) {
+      if (type === "grad") {
+        document.getElementById("themeSelect").value = "Tốt nghiệp";
+        document.getElementById("senderInput").value = "Minh Anh";
+        document.getElementById("recipientInput").value = "Lan Phương";
+        document.getElementById("messageInput").value = "Chúc mừng tân cử nhân! Chúc cậu luôn tự tin, bản lĩnh và gặp nhiều cơ hội tuyệt vời sắp tới.";
+        document.getElementById("pinInput").value = "2026";
+      } else if (type === "bday") {
+        document.getElementById("themeSelect").value = "Sinh nhật";
+        document.getElementById("senderInput").value = "Hoàng Nam";
+        document.getElementById("recipientInput").value = "Thảo Vy";
+        document.getElementById("messageInput").value = "Sinh nhật vui vẻ nhé! Mong tuổi mới của cậu tràn ngập tiếng cười, sức khỏe và thật nhiều niềm vui.";
+        document.getElementById("pinInput").value = "1908";
       } else {
-        createView.classList.add('hidden');
-        previewView.classList.remove('hidden');
-        navBtn.classList.remove('hidden');
-        resetEnvelope();
+        document.getElementById("themeSelect").value = "Tri ân đối tác / Khách hàng";
+        document.getElementById("senderInput").value = "Đội ngũ VoiceCard";
+        document.getElementById("recipientInput").value = "Khách hàng thân thiết";
+        document.getElementById("messageInput").value = "Cảm ơn bạn đã tin tưởng đồng hành cùng chúng mình. Nhập PIN để nghe lời tri ân đặc biệt dành riêng cho bạn.";
+        document.getElementById("pinInput").value = "8888";
       }
+      generateQR(true);
     }
 
-    // --- THEME SELECTION ---
-    function selectTheme(themeKey) {
-      state.theme = themeKey;
-      
-      // Update UI selection buttons
-      document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.classList.remove('active', 'border-rose-500');
-        btn.classList.add('border-transparent');
+    function blobToDataUrl(blob) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result || "");
+        reader.readAsDataURL(blob);
       });
-
-      const selectedBtn = document.getElementById(`theme-${themeKey}`);
-      if (selectedBtn) {
-        selectedBtn.classList.add('active', 'border-rose-500');
-        selectedBtn.classList.remove('border-transparent');
-      }
-
-      updateMiniPreview();
-      renderBackgroundParticles();
     }
 
-    function updateMiniPreview() {
-      const config = themesConfig[state.theme];
-      const card = document.getElementById('mini-preview-card');
-      
-      // Update Card Theme class
-      card.className = `w-full max-w-sm aspect-[4/5] rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between transition-all duration-500 border border-white/20 ${config.bgClass}`;
-      
-      document.getElementById('mini-theme-tag').innerText = config.badge;
-      document.getElementById('mini-receiver').innerText = state.receiver;
-      document.getElementById('mini-sender').innerText = state.sender;
-      document.getElementById('mini-message').innerText = `"${state.message}"`;
-
-      const audioBadge = document.getElementById('mini-audio-badge');
-      if (state.audioBase64) {
-        audioBadge.classList.remove('hidden');
-      } else {
-        audioBadge.classList.add('hidden');
-      }
-    }
-
-    // --- AUDIO RECORDING FUNCTIONALITY ---
-    async function toggleRecording() {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        stopRecording();
-      } else {
-        startRecording();
-      }
-    }
-
-    async function startRecording() {
+    async function toggleRecord() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        chunks = [];
         mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+          const url = URL.createObjectURL(blob);
+          const dataUrl = await blobToDataUrl(blob);
 
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunks.push(event.data);
-          }
+          currentCard.mediaUrl = url;
+          currentCard.mediaBase64 = dataUrl;
+          currentCard.mediaType = "audio";
+          currentCard.mediaName = "Ghi âm giọng nói";
+
+          const aud = document.getElementById("previewAudio");
+          aud.classList.remove("hidden");
+          aud.src = url;
+          document.getElementById("previewVideo").classList.add("hidden");
+          document.getElementById("recStatus").textContent = "✅ Đã thu âm xong và cập nhật mã QR!";
+
+          generateQR(true);
+          stream.getTracks().forEach(t => t.stop());
         };
-
-        mediaRecorder.onstop = () => {
-          recordedAudioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
-          const audioUrl = URL.createObjectURL(recordedAudioBlob);
-          document.getElementById('audio-preview').src = audioUrl;
-
-          // Convert Blob to Base64 DataURL for lightweight storage
-          const reader = new FileReader();
-          reader.readAsDataURL(recordedAudioBlob);
-          reader.onloadend = () => {
-            state.audioBase64 = reader.result;
-            updateMiniPreview();
-            showToast('Đã lưu bản ghi âm!', 'success');
-          };
-        };
-
         mediaRecorder.start();
-        recordSeconds = 0;
-        updateTimerDisplay();
-
-        // UI Updates for Recording State
-        const btn = document.getElementById('btn-start-record');
-        btn.innerHTML = `<i class="fa-solid fa-square text-rose-500 animate-pulse text-xs"></i> Dừng ghi âm`;
-        btn.classList.add('bg-rose-500/40', 'border-rose-500');
-
-        document.getElementById('mic-status-icon').className = 'w-12 h-12 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 animate-bounce';
-        document.getElementById('record-status-text').innerText = 'Đang ghi âm...';
-
-        recordTimerInterval = setInterval(() => {
-          recordSeconds++;
-          updateTimerDisplay();
-          if (recordSeconds >= 60) {
-            stopRecording();
-          }
-        }, 1000);
-
+        document.getElementById("recBtn").classList.add("hidden");
+        document.getElementById("stopBtn").classList.remove("hidden");
+        document.getElementById("recStatus").textContent = "🔴 Đang thu âm... hãy nói lời nhắn của bạn.";
       } catch (err) {
-        showToast('Không thể truy cập Micro. Vui lòng cấp quyền!', 'error');
-        console.error('Microphone error:', err);
+        document.getElementById("recStatus").textContent = "⚠️ Không truy cập được micro — hãy chọn 'Tải file âm thanh/video'.";
       }
     }
 
-    function stopRecording() {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-      }
-      clearInterval(recordTimerInterval);
-
-      // UI Restore
-      const btn = document.getElementById('btn-start-record');
-      btn.innerHTML = `<i class="fa-solid fa-microphone text-xs"></i> Ghi âm lại`;
-      btn.classList.remove('bg-rose-500/40', 'border-rose-500');
-
-      document.getElementById('mic-status-icon').className = 'w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400';
-      document.getElementById('record-status-text').innerText = 'Bản ghi âm đã sẵn sàng';
-
-      document.getElementById('btn-play-record').classList.remove('hidden');
-      document.getElementById('btn-play-record').classList.add('flex');
-      document.getElementById('btn-delete-record').classList.remove('hidden');
+    function stopRecord() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+      document.getElementById("recBtn").classList.remove("hidden");
+      document.getElementById("stopBtn").classList.add("hidden");
     }
 
-    function updateTimerDisplay() {
-      const mins = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
-      const secs = String(recordSeconds % 60).padStart(2, '0');
-      document.getElementById('record-timer').innerText = `${mins}:${secs} / 01:00 (Tối đa)`;
-    }
+    async function handleFileUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const isVideo = file.type && file.type.startsWith("video/");
+      const url = URL.createObjectURL(file);
+      const dataUrl = await blobToDataUrl(file);
 
-    function playRecord() {
-      const audioElement = document.getElementById('audio-preview');
-      if (audioElement.src) {
-        audioElement.play();
-        showToast('Đang phát bản ghi âm...', 'info');
-      }
-    }
+      currentCard.mediaUrl = url;
+      currentCard.mediaBase64 = dataUrl;
+      currentCard.mediaType = isVideo ? "video" : "audio";
+      currentCard.mediaName = file.name;
 
-    function deleteRecord() {
-      state.audioBase64 = null;
-      recordedAudioBlob = null;
-      document.getElementById('audio-preview').src = '';
-      document.getElementById('btn-play-record').classList.add('hidden');
-      document.getElementById('btn-delete-record').classList.add('hidden');
-      
-      const btn = document.getElementById('btn-start-record');
-      btn.innerHTML = `<i class="fa-solid fa-circle text-rose-500 text-xs"></i> Bắt đầu ghi âm`;
-
-      document.getElementById('mic-status-icon').className = 'w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400';
-      document.getElementById('record-status-text').innerText = 'Chưa có bản ghi âm';
-      document.getElementById('record-timer').innerText = '00:00 / 01:00 (Tối đa)';
-
-      updateMiniPreview();
-      showToast('Đã xóa bản ghi âm', 'info');
-    }
-
-    // --- PREVIEW & CARD INTERACTION ---
-    function previewCard() {
-      switchView('preview');
-      setupPreviewCardData();
-    }
-
-    function setupPreviewCardData() {
-      const config = themesConfig[state.theme];
-      const cardOpened = document.getElementById('card-opened');
-
-      // Update card backdrop & content
-      cardOpened.className = `hidden w-full aspect-[4/5] rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden flex flex-col justify-between border-2 border-white/30 transition-all duration-700 transform scale-95 opacity-0 ${config.bgClass}`;
-      
-      document.getElementById('preview-card-theme').innerText = config.badge;
-      document.getElementById('preview-card-receiver').innerText = state.receiver;
-      document.getElementById('preview-card-sender').innerText = state.sender;
-      document.getElementById('preview-card-message').innerText = `"${state.message}"`;
-
-      // Voice Audio container
-      const audioContainer = document.getElementById('preview-audio-container');
-      if (state.audioBase64) {
-        audioContainer.classList.remove('hidden');
-        if (!voiceCardAudio) {
-          voiceCardAudio = new Audio();
-        }
-        voiceCardAudio.src = state.audioBase64;
+      const aud = document.getElementById("previewAudio");
+      const vid = document.getElementById("previewVideo");
+      if (isVideo) {
+        vid.src = url;
+        vid.classList.remove("hidden");
+        aud.classList.add("hidden");
       } else {
-        audioContainer.classList.add('hidden');
+        aud.src = url;
+        aud.classList.remove("hidden");
+        vid.classList.add("hidden");
       }
+      document.getElementById("recStatus").textContent = "✅ Đã tải tệp: " + file.name + " và cập nhật mã QR!";
+      generateQR(true);
     }
 
-    function resetEnvelope() {
-      const envelopeBox = document.getElementById('envelope-box');
-      const cardOpened = document.getElementById('card-opened');
-
-      envelopeBox.classList.remove('hidden', 'envelope-open');
-      cardOpened.classList.add('hidden');
-      cardOpened.classList.remove('scale-100', 'opacity-100');
-      cardOpened.classList.add('scale-95', 'opacity-0');
+    function drawFallbackQR(container, urlText) {
+      const img = document.createElement("img");
+      img.width = 190;
+      img.height = 190;
+      img.alt = "QR Code";
+      img.src = "https://quickchart.io/qr?size=190&text=" + encodeURIComponent(urlText);
+      container.appendChild(img);
     }
 
-    function openEnvelope() {
-      const envelopeBox = document.getElementById('envelope-box');
-      const cardOpened = document.getElementById('card-opened');
-
-      // Animation steps
-      envelopeBox.classList.add('envelope-open');
-
-      setTimeout(() => {
-        envelopeBox.classList.add('hidden');
-        cardOpened.classList.remove('hidden');
-
-        setTimeout(() => {
-          cardOpened.classList.remove('scale-95', 'opacity-0');
-          cardOpened.classList.add('scale-100', 'opacity-100');
-          triggerEffects();
-        }, 50);
-
-      }, 600);
+    function renderQRCode(urlText) {
+      const container = document.getElementById("qrContainer");
+      container.innerHTML = "";
+      try {
+        if (typeof QRCode === "function") {
+          new QRCode(container, {
+            text: urlText,
+            width: 190,
+            height: 190,
+            colorDark: "#1B3632",
+            colorLight: "#FFFFFF",
+            correctLevel: QRCode.CorrectLevel.L
+          });
+          setTimeout(() => {
+            if (!container.querySelector("canvas") && !container.querySelector("img")) {
+              drawFallbackQR(container, urlText);
+            }
+          }, 120);
+          return;
+        }
+      } catch (e) {}
+      drawFallbackQR(container, urlText);
     }
 
-    // --- EFFECTS & ANIMATIONS ---
-    function triggerEffects() {
-      const config = themesConfig[state.theme];
+    function generateQR(highlight = false) {
+      const rawPin = (document.getElementById("pinInput").value || "1234").replace(/\D/g, "");
+      const pin = (rawPin || "1234").padEnd(4, "0").slice(0, 4);
+      currentCard.theme = document.getElementById("themeSelect").value;
+      currentCard.pin = pin;
+      currentCard.sender = document.getElementById("senderInput").value.trim() || "Người gửi";
+      currentCard.recipient = document.getElementById("recipientInput").value.trim() || "Người nhận";
+      currentCard.message = (document.getElementById("messageInput").value.trim() || "Gửi bạn lời chúc tốt đẹp nhất!").slice(0, 140);
 
-      if (config.particleType === 'confetti' || config.particleType === 'stars') {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-      } else if (config.particleType === 'hearts') {
-        confetti({
-          particleCount: 50,
-          scalar: 1.2,
-          shapes: ['circle'],
-          colors: ['#ff4d6d', '#ff758f', '#ffb3c1'],
-          origin: { y: 0.6 }
-        });
-      } else if (config.particleType === 'snow') {
-        confetti({
-          particleCount: 60,
-          spread: 100,
-          colors: ['#ffffff', '#e0f2fe'],
-          origin: { y: 0.4 }
-        });
+      document.getElementById("pinDisplay").textContent = `Mã PIN mở khóa: ${currentCard.pin}`;
+      updateFileInfoOnly();
+
+      const baseUrl = window.location.href.startsWith("http")
+        ? window.location.href.split("#")[0].split("?")[0]
+        : "https://nguyenkimngann0001-ship-it.github.io/voicecard/";
+
+      let targetUrl = `${baseUrl}?mode=recipient&id=${encodeURIComponent(currentCard.id)}&pin=${encodeURIComponent(currentCard.pin)}&theme=${encodeURIComponent(currentCard.theme)}&from=${encodeURIComponent(currentCard.sender.slice(0, 24))}&to=${encodeURIComponent(currentCard.recipient.slice(0, 24))}&msg=${encodeURIComponent(currentCard.message)}&mtype=${encodeURIComponent(currentCard.mediaType)}&mname=${encodeURIComponent(currentCard.mediaName)}`;
+
+      const statusEl = document.getElementById("qrUpdateStatus");
+      // Nếu bản ghi âm đủ gọn để nhúng thẳng vào QR (< 1600 ký tự) thì gắn luôn vào URL
+      if (currentCard.mediaBase64 && currentCard.mediaBase64.length < 1500) {
+        targetUrl += `&audio=${encodeURIComponent(currentCard.mediaBase64)}`;
       }
-    }
 
-    // --- VOICE IN CARD PLAYBACK ---
-    function playVoiceInCard() {
-      if (voiceCardAudio && state.audioBase64) {
-        const icon = document.getElementById('card-voice-icon');
-        const text = document.getElementById('card-voice-text');
+      renderQRCode(targetUrl);
+      syncRecipientCard();
 
-        if (voiceCardAudio.paused) {
-          voiceCardAudio.play();
-          icon.className = 'fa-solid fa-circle-pause text-amber-300 text-base animate-pulse';
-          text.innerText = 'Đang phát lời chúc...';
-
-          voiceCardAudio.onended = () => {
-            icon.className = 'fa-solid fa-circle-play text-amber-300 text-base';
-            text.innerText = 'Nghe lại lời chúc giọng nói';
-          };
+      if (highlight) {
+        const box = document.getElementById("qrContainer");
+        box.classList.add("updated");
+        if (currentCard.mediaBase64 && currentCard.mediaBase64.length >= 1500) {
+          statusEl.textContent = "✨ QR đã cập nhật (ghi âm hơi dài nên dùng bản ghi âm hiện tại khi quét thử).";
+        } else if (currentCard.mediaName) {
+          statusEl.textContent = `✨ Mã QR đã hiện & nhúng "${currentCard.mediaName}"!`;
         } else {
-          voiceCardAudio.pause();
-          icon.className = 'fa-solid fa-circle-play text-amber-300 text-base';
-          text.innerText = 'Nghe lại lời chúc giọng nói';
+          statusEl.textContent = "✨ Mã QR đã được cập nhật!";
         }
+        setTimeout(() => box.classList.remove("updated"), 800);
       }
     }
 
-    // --- GENERATE QR & SHARE LINK ---
-    function generateQRAndShare() {
-      // 1. Prepare Data payload
-      const payload = {
-        t: state.theme,
-        r: state.receiver,
-        s: state.sender,
-        m: state.message,
-        a: state.audioBase64 || null
-      };
-
-      try {
-        // Compress data to URL Safe String via JSON + Base64
-        const jsonStr = JSON.stringify(payload);
-        const encodedData = encodeURIComponent(btoa(unescape(encodeURIComponent(jsonStr))));
-        
-        // Build URL
-        const shareUrl = `${window.location.origin}${window.location.pathname}#card=${encodedData}`;
-
-        // 2. Generate QR Code
-        const qrContainer = document.getElementById('qrcode-container');
-        qrContainer.innerHTML = ''; // Clear previous
-
-        new QRCode(qrContainer, {
-          text: shareUrl,
-          width: 200,
-          height: 200,
-          colorDark : "#0f172a",
-          colorLight : "#ffffff",
-          correctLevel : QRCode.CorrectLevel.L
-        });
-
-        // Store generated URL on button dataset for copy
-        document.getElementById('qr-modal').dataset.url = shareUrl;
-
-        // 3. Open Modal
-        openQRModal();
-
-      } catch (e) {
-        console.error('QR Encoding error:', e);
-        showToast('Nội dung quá dài để đóng gói vào mã QR! Vui lòng rút ngắn lời chúc.', 'error');
-      }
-    }
-
-    function openQRModal() {
-      const modal = document.getElementById('qr-modal');
-      const content = document.getElementById('qr-modal-content');
-      modal.classList.remove('hidden');
-      setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        content.classList.remove('scale-90');
-        content.classList.add('scale-100');
-      }, 10);
-    }
-
-    function closeQRModal() {
-      const modal = document.getElementById('qr-modal');
-      const content = document.getElementById('qr-modal-content');
-      modal.classList.add('opacity-0');
-      content.classList.remove('scale-100');
-      content.classList.add('scale-90');
-      setTimeout(() => {
-        modal.classList.add('hidden');
-      }, 300);
-    }
-
-    function copyShareLink() {
-      const url = document.getElementById('qr-modal').dataset.url;
-      if (url) {
-        // Fallback or Clipboard API
-        const dummy = document.createElement('input');
-        document.body.appendChild(dummy);
-        dummy.value = url;
-        dummy.select();
-        document.execCommand('copy');
-        document.body.removeChild(dummy);
-
-        showToast('Đã sao chép đường dẫn thiệp vào bộ nhớ tạm!', 'success');
-      }
-    }
-
-    function downloadQRCode() {
-      const img = document.querySelector('#qrcode-container img');
-      const canvas = document.querySelector('#qrcode-container canvas');
-      
-      let imageSrc = '';
-      if (img && img.src) {
-        imageSrc = img.src;
-      } else if (canvas) {
-        imageSrc = canvas.toDataURL("image/png");
-      }
-
-      if (imageSrc) {
-        const link = document.createElement('a');
-        link.href = imageSrc;
-        link.download = `thiep-chuc-mung-${state.receiver}.png`;
+    function downloadQR() {
+      const canvas = document.querySelector("#qrContainer canvas");
+      const img = document.querySelector("#qrContainer img");
+      const link = document.createElement("a");
+      link.download = `${currentCard.id}-QR.png`;
+      if (canvas) {
+        link.href = canvas.toDataURL("image/png");
         link.click();
-        showToast('Đã tải xuống mã QR!', 'success');
+      } else if (img && img.src) {
+        link.href = img.src;
+        link.click();
       }
     }
 
-    // --- CHECK URL FOR INCOMING RECEIVER CARD ---
-    function checkUrlData() {
-      const hash = window.location.hash;
-      if (hash && hash.includes('#card=')) {
-        try {
-          const encodedData = hash.split('#card=')[1];
-          const jsonStr = decodeURIComponent(escape(atob(decodeURIComponent(encodedData))));
-          const data = JSON.parse(jsonStr);
+    function syncRecipientCard() {
+      document.getElementById("recThemeTag").textContent = currentCard.theme.toUpperCase();
+      document.getElementById("recGreeting").textContent = `Gửi tới ${currentCard.recipient}`;
+      document.getElementById("recHintDemo").textContent = `Nhập mã PIN 4 số để mở khóa lời nhắn riêng tư.`;
+      document.getElementById("cardMeta").textContent = `Từ: ${currentCard.sender} • Mã thiệp: ${currentCard.id}`;
+      document.getElementById("cardText").textContent = currentCard.message;
 
-          if (data) {
-            state.theme = data.t || 'birthday';
-            state.receiver = data.r || 'Bạn';
-            state.sender = data.s || 'Người gửi';
-            state.message = data.m || 'Lời chúc mừng!';
-            state.audioBase64 = data.a || null;
+      const aud = document.getElementById("recAudio");
+      const vid = document.getElementById("recVideo");
+      const note = document.getElementById("mediaNote");
+      const waveBox = document.getElementById("waveBox");
+      const waveTitle = document.getElementById("waveTitle");
+      const srcUrl = currentCard.mediaBase64 || currentCard.mediaUrl || document.getElementById("previewAudio").src;
 
-            // Direct to Preview Receiver Mode
-            previewCard();
-            showToast('Bạn vừa nhận được một thiệp chúc mừng!', 'info');
-          }
-        } catch (e) {
-          console.error('Invalid card data in URL', e);
-        }
-      }
-    }
-
-    // --- BACKGROUND MUSIC GENERATOR (Web Audio API - Synthesizer) ---
-    function toggleBackgroundMusic() {
-      if (state.bgMusicPlaying) {
-        stopBackgroundMusic();
+      if (currentCard.mediaType === "video" && srcUrl) {
+        vid.src = srcUrl;
+        vid.classList.remove("hidden");
+        aud.classList.add("hidden");
+        waveBox.classList.add("hidden");
+        note.textContent = currentCard.mediaName ? `🎬 Video đính kèm: ${currentCard.mediaName}` : "";
+      } else if (srcUrl) {
+        aud.src = srcUrl;
+        aud.classList.remove("hidden");
+        vid.classList.add("hidden");
+        waveBox.classList.remove("hidden");
+        waveTitle.textContent = `🎧 ${currentCard.mediaName || "Lời nhắn giọng nói"}`;
+        note.textContent = "Bấm phát hoặc đợi tự động phát để nghe lời nhắn.";
       } else {
-        startBackgroundMusic();
+        aud.classList.add("hidden");
+        vid.classList.add("hidden");
+        waveBox.classList.add("hidden");
+        note.textContent = "Thiệp này chỉ có lời nhắn văn bản.";
       }
     }
 
-    function startBackgroundMusic() {
+    function switchTab(tab) {
+      if (isScannedRecipientMode) return;
+      const isSender = tab === "sender";
+      document.getElementById("senderView").classList.toggle("hidden", !isSender);
+      document.getElementById("recipientView").classList.toggle("hidden", isSender);
+      document.getElementById("tabSender").classList.toggle("active", isSender);
+      document.getElementById("tabRecipient").classList.toggle("active", !isSender);
+      if (!isSender) syncRecipientCard();
+    }
+
+    function openRecipientDemo() {
+      lockCardAgain();
+      switchTab("recipient");
+      const digits = document.querySelectorAll(".pin-digit");
+      digits.forEach((d, idx) => d.value = currentCard.pin[idx] || "");
+      unlockCard();
+    }
+
+    function movePin(el, index) {
+      el.value = el.value.replace(/\D/g, "");
+      const digits = document.querySelectorAll(".pin-digit");
+      if (el.value && index < 3) digits[index + 1].focus();
+      if (Array.from(digits).every(d => d.value.length === 1)) unlockCard();
+    }
+
+    function triggerConfettiEffect() {
+      if (typeof confetti === "function") {
+        confetti({
+          particleCount: 95,
+          spread: 75,
+          origin: { y: 0.6 },
+          colors: ['#B8860B', '#1B3632', '#E6D5A8', '#D97706']
+        });
+      }
+    }
+
+    function unlockCard() {
+      const entered = Array.from(document.querySelectorAll(".pin-digit")).map(d => d.value).join("");
+      const errEl = document.getElementById("pinError");
+      if (entered === currentCard.pin) {
+        errEl.textContent = "";
+        document.getElementById("pinLockBox").classList.add("hidden");
+        document.getElementById("unlockedBox").classList.remove("hidden");
+        syncRecipientCard();
+        triggerConfettiEffect();
+
+        const aud = document.getElementById("recAudio");
+        const vid = document.getElementById("recVideo");
+        if (!aud.classList.contains("hidden") && aud.src) {
+          aud.play().catch(() => {});
+        } else if (!vid.classList.contains("hidden") && vid.src) {
+          vid.play().catch(() => {});
+        }
+      } else {
+        errEl.textContent = "Mã PIN chưa đúng, vui lòng thử lại.";
+      }
+    }
+
+    function lockCardAgain() {
+      document.getElementById("recAudio").pause();
+      document.getElementById("recVideo").pause();
+      document.getElementById("unlockedBox").classList.add("hidden");
+      document.getElementById("pinLockBox").classList.remove("hidden");
+      document.getElementById("reactionMsg").textContent = "";
+      document.querySelectorAll(".pin-digit").forEach(d => d.value = "");
+    }
+
+    function sendReaction() {
+      triggerConfettiEffect();
+      document.getElementById("reactionMsg").textContent = `💖 Đã gửi lời cảm ơn tới ${currentCard.sender}!`;
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const aud = document.getElementById("recAudio");
+      const wave = document.getElementById("soundWave");
+      const badge = document.getElementById("waveBadge");
+
+      aud.addEventListener("play", () => {
+        wave.classList.add("playing");
+        badge.textContent = "🔊 Đang phát...";
+      });
+      aud.addEventListener("pause", () => {
+        wave.classList.remove("playing");
+        badge.textContent = "Tạm dừng";
+      });
+      aud.addEventListener("ended", () => {
+        wave.classList.remove("playing");
+        badge.textContent = "Đã nghe xong";
+      });
+
       try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContext();
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("mode") === "recipient" || params.get("to") || params.get("msg") || params.get("pin")) {
+          isScannedRecipientMode = true;
+          currentCard.id = params.get("id") || currentCard.id;
+          currentCard.pin = params.get("pin") || currentCard.pin;
+          currentCard.theme = params.get("theme") || currentCard.theme;
+          currentCard.sender = params.get("from") || currentCard.sender;
+          currentCard.recipient = params.get("to") || currentCard.recipient;
+          currentCard.message = params.get("msg") || currentCard.message;
+          currentCard.mediaType = params.get("mtype") || "audio";
+          currentCard.mediaName = params.get("mname") || "Lời nhắn giọng nói";
+          if (params.get("audio")) {
+            currentCard.mediaBase64 = params.get("audio");
+          }
 
-        // Relaxing chord sequence notes (Hz)
-        const notes = [261.63, 329.63, 392.00, 523.25]; // C major soft harmony
-        let noteIdx = 0;
-
-        function playChord() {
-          if (!audioCtx) return;
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(notes[noteIdx % notes.length], audioCtx.currentTime);
-          
-          gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.5);
-          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.5);
-
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-
-          osc.start();
-          osc.stop(audioCtx.currentTime + 2.6);
-
-          noteIdx++;
+          // Ẩn hoàn toàn mục Tạo thiệp & Lấy QR + nút chuyển tab
+          document.body.classList.add("recipient-only");
+          document.getElementById("navTabs").classList.add("hidden");
+          document.getElementById("senderView").classList.add("hidden");
+          document.getElementById("recipientView").classList.remove("hidden");
+          syncRecipientCard();
+          return;
         }
+      } catch (e) {}
 
-        playChord();
-        bgOscillator = setInterval(playChord, 1800);
-
-        state.bgMusicPlaying = true;
-        document.getElementById('bg-music-text').innerText = 'Nhạc nền: Bật 🎶';
-      } catch (e) {
-        console.log('Web Audio setup failed', e);
-      }
-    }
-
-    function stopBackgroundMusic() {
-      if (bgOscillator) {
-        clearInterval(bgOscillator);
-        bgOscillator = null;
-      }
-      if (audioCtx) {
-        audioCtx.close();
-        audioCtx = null;
-      }
-      state.bgMusicPlaying = false;
-      const musicText = document.getElementById('bg-music-text');
-      if (musicText) musicText.innerText = 'Nhạc nền: Tắt';
-    }
-
-    // --- BACKGROUND PARTICLES SYSTEM ---
-    function renderBackgroundParticles() {
-      const container = document.getElementById('particles-container');
-      container.innerHTML = '';
-
-      const count = 15;
-      const symbols = {
-        birthday: ['✨', '🎈', '🎉', '⭐'],
-        christmas: ['❄️', '✨', '🎄', '⭐'],
-        love: ['💖', '💕', '✨', '🌸'],
-        thanks: ['🌻', '✨', '🌿', '⭐']
-      };
-
-      const currentSymbols = symbols[state.theme] || symbols.birthday;
-
-      for (let i = 0; i < count; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle text-xl select-none';
-        p.innerText = currentSymbols[Math.floor(Math.random() * currentSymbols.length)];
-        p.style.left = `${Math.random() * 100}vw`;
-        p.style.animationDuration = `${6 + Math.random() * 6}s`;
-        p.style.animationDelay = `${Math.random() * 5}s`;
-        p.style.opacity = Math.random() * 0.7 + 0.3;
-        container.appendChild(p);
-      }
-    }
-
-    // --- TOAST NOTIFICATIONS ---
-    function showToast(msg, type = 'info') {
-      const toast = document.getElementById('toast');
-      const toastMsg = document.getElementById('toast-message');
-      const toastIcon = document.getElementById('toast-icon');
-
-      toastMsg.innerText = msg;
-
-      if (type === 'success') {
-        toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-xl';
-      } else if (type === 'error') {
-        toastIcon.className = 'fa-solid fa-circle-xmark text-rose-400 text-xl';
-      } else {
-        toastIcon.className = 'fa-solid fa-circle-info text-sky-400 text-xl';
-      }
-
-      toast.classList.remove('translate-y-[-150%]', 'opacity-0');
-      toast.classList.add('translate-y-0', 'opacity-100');
-
-      setTimeout(() => {
-        toast.classList.remove('translate-y-0', 'opacity-100');
-        toast.classList.add('translate-y-[-150%]', 'opacity-0');
-      }, 3500);
-    }
+      generateQR(false);
+    });
   </script>
 </body>
 </html>
